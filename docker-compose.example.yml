@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - MONGO_CONNECTION_STRING=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/
+      - MongoDb__DatabaseName=HenryTiresInventory
+      - Jwt__Key=your-super-secret-jwt-key-min-32-characters-long
+      - Jwt__Issuer=https://your-domain.com
+      - Jwt__Audience=https://your-domain.com
+      - Jwt__ExpiryMinutes=480
+    restart: unless-stopped
+
+# For local development with MongoDB
+# Uncomment this if you want to run MongoDB locally
+#  mongodb:
+#    image: mongo:latest
+#    ports:
+#      - "27017:27017"
+#    environment:
+#      - MONGO_INITDB_ROOT_USERNAME=admin
+#      - MONGO_INITDB_ROOT_PASSWORD=password
+#    volumes:
+#      - mongodb_data:/data/db
+#
+#volumes:
+#  mongodb_data:

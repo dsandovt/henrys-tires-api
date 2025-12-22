@@ -9,3 +9,8 @@
 **/node_modules
 **/*.user
 **/*.suo
+
+# Don't copy sensitive configuration files
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
