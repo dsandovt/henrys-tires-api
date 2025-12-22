@@ -26,7 +26,16 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("MongoDB connection string not configured");
         }
 
-        services.AddSingleton<IMongoClient>(sp => new MongoClient(connectionString));
+        // Configure MongoDB client with SSL settings to fix Linux/Railway SSL issues
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
+        settings.SslSettings = new MongoDB.Driver.SslSettings
+        {
+            EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
+            CheckCertificateRevocation = false
+        };
+        settings.ServerSelectionTimeout = TimeSpan.FromSeconds(30);
+
+        services.AddSingleton<IMongoClient>(sp => new MongoClient(settings));
 
         var databaseName = configuration["MongoDb:DatabaseName"] ?? "Inventory";
         services.AddSingleton(sp =>
