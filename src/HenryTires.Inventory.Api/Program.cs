@@ -5,8 +5,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel to use specific URLs
-builder.WebHost.UseUrls("http://localhost:5099");
+// Configure Kestrel to bind to 0.0.0.0 and use PORT from environment (Railway) or default to 5099
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5099";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services
 builder.Services.AddControllers();
@@ -42,5 +43,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-Log.Information("Henry's Tires Inventory API starting on http://localhost:5099");
+Log.Information("Henry's Tires Inventory API starting on http://0.0.0.0:{Port}", port);
 app.Run();
