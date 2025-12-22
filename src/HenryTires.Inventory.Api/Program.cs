@@ -29,14 +29,11 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 // Configure middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Henry's Tires Inventory API v1");
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Henry's Tires Inventory API v1");
+});
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
