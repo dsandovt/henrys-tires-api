@@ -82,12 +82,20 @@ public class DashboardService
         var todayEnd = todayStart.AddDays(1).AddTicks(-1);
 
         // Calculate summary metrics (including sales)
-        var summary = await CalculateSummaryAsync(filteredTransactions, committedSales, todayStart, todayEnd);
+        var summary = await CalculateSummaryAsync(
+            filteredTransactions,
+            committedSales,
+            todayStart,
+            todayEnd
+        );
         summary.StartDate = startDateUtc;
         summary.EndDate = endDateUtc;
 
         // Calculate branch breakdown (including sales)
-        var branchBreakdown = await CalculateBranchBreakdownAsync(filteredTransactions, committedSales);
+        var branchBreakdown = await CalculateBranchBreakdownAsync(
+            filteredTransactions,
+            committedSales
+        );
 
         // Get recent activity (last 10 transactions + sales)
         var recentActivity = await GetRecentActivityAsync(filteredTransactions, committedSales);
@@ -110,8 +118,9 @@ public class DashboardService
         var outTransactions = transactions.Where(t => t.Type == TransactionType.Out).ToList();
         var inTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
 
-        // Calculate totals from Sales (includes both Goods and Services)
-        var salesTotal = sales.Sum(s => s.Lines.Sum(l => l.LineTotal));
+        var salesTotal =
+            sales.Sum(s => s.Lines.Sum(l => l.LineTotal))
+            + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
         var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
 
         // Calculate today's totals
@@ -119,32 +128,45 @@ public class DashboardService
             .Where(s => s.SaleDateUtc >= todayStart && s.SaleDateUtc <= todayEnd)
             .ToList();
 
-        var todayPurchases = transactions
-            .Where(t => t.Type == TransactionType.In && t.TransactionDateUtc >= todayStart && t.TransactionDateUtc <= todayEnd)
+        var todayOutTransactions = outTransactions
+            .Where(t => t.TransactionDateUtc >= todayStart && t.TransactionDateUtc <= todayEnd)
             .ToList();
 
-        var salesToday = todaySales.Sum(s => s.Lines.Sum(l => l.LineTotal));
+        var todayPurchases = transactions
+            .Where(t =>
+                t.Type == TransactionType.In
+                && t.TransactionDateUtc >= todayStart
+                && t.TransactionDateUtc <= todayEnd
+            )
+            .ToList();
+
+        var salesToday =
+            todaySales.Sum(s => s.Lines.Sum(l => l.LineTotal))
+            + todayOutTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
         var purchasesToday = todayPurchases.Sum(t => t.Lines.Sum(l => l.LineTotal));
 
         // Determine currency (use USD as default if mixed or no transactions)
-        var currency = sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
+        var currency =
+            sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
             ?? transactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
             ?? "USD";
 
-        return Task.FromResult(new DashboardSummaryDto
-        {
-            SalesTotal = salesTotal,
-            PurchasesTotal = purchasesTotal,
-            NetTotal = salesTotal - purchasesTotal,
-            SalesToday = salesToday,
-            PurchasesToday = purchasesToday,
-            TotalTransactions = sales.Count + inTransactions.Count,
-            SalesTransactions = sales.Count,
-            PurchaseTransactions = inTransactions.Count,
-            Currency = currency,
-            StartDate = DateTime.UtcNow, // Will be set by caller
-            EndDate = DateTime.UtcNow, // Will be set by caller
-        });
+        return Task.FromResult(
+            new DashboardSummaryDto
+            {
+                SalesTotal = salesTotal,
+                PurchasesTotal = purchasesTotal,
+                NetTotal = salesTotal - purchasesTotal,
+                SalesToday = salesToday,
+                PurchasesToday = purchasesToday,
+                TotalTransactions = sales.Count + inTransactions.Count + outTransactions.Count,
+                SalesTransactions = sales.Count + outTransactions.Count,
+                PurchaseTransactions = inTransactions.Count,
+                Currency = currency,
+                StartDate = DateTime.UtcNow, // Will be set by caller
+                EndDate = DateTime.UtcNow, // Will be set by caller
+            }
+        );
     }
 
     private async Task<List<BranchBreakdownDto>> CalculateBranchBreakdownAsync(
@@ -160,7 +182,8 @@ public class DashboardService
         var transactionsByBranch = transactions.GroupBy(t => t.BranchCode);
 
         // Get all unique branch IDs from both sales and transactions
-        var allBranchIds = salesByBranch.Select(g => g.Key)
+        var allBranchIds = salesByBranch
+            .Select(g => g.Key)
             .Union(transactionsByBranch.Select(g => g.Key))
             .Distinct();
 
@@ -168,17 +191,27 @@ public class DashboardService
 
         foreach (var branchId in allBranchIds)
         {
-            var branchSales = salesByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList() ?? new List<Sale>();
-            var branchTransactions = transactionsByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList() ?? new List<InventoryTransaction>();
+            var branchSales =
+                salesByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList() ?? new List<Sale>();
+            var branchTransactions =
+                transactionsByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList()
+                ?? new List<InventoryTransaction>();
 
             var inTransactions = branchTransactions
                 .Where(t => t.Type == TransactionType.In)
                 .ToList();
 
-            var salesTotal = branchSales.Sum(s => s.Lines.Sum(l => l.LineTotal));
+            var outTransactions = branchTransactions
+                .Where(t => t.Type == TransactionType.Out)
+                .ToList();
+
+            var salesTotal =
+                branchSales.Sum(s => s.Lines.Sum(l => l.LineTotal))
+                + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
             var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
 
-            var currency = branchSales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
+            var currency =
+                branchSales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
                 ?? branchTransactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
                 ?? "USD";
 
@@ -190,7 +223,7 @@ public class DashboardService
                     SalesTotal = salesTotal,
                     PurchasesTotal = purchasesTotal,
                     NetTotal = salesTotal - purchasesTotal,
-                    SalesTransactionCount = branchSales.Count,
+                    SalesTransactionCount = branchSales.Count + outTransactions.Count,
                     PurchaseTransactionCount = inTransactions.Count,
                     Currency = currency,
                 }

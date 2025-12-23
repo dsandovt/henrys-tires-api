@@ -7,7 +7,7 @@ namespace HenryTires.Inventory.Infrastructure.Repositories;
 public class SaleRepository : CrudRepository<Sale>, ISaleRepository
 {
     public SaleRepository(IMongoClient client)
-        : base(client, "Inventory", "Sales") { }
+        : base(client, "Inventory", "Sale") { }
 
     public async Task<IEnumerable<Sale>> GetByBranchAndDateRangeAsync(
         string branchId,
