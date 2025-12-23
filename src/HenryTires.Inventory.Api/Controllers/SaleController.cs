@@ -10,11 +10,11 @@ namespace HenryTires.Inventory.Api.Controllers;
 [ApiController]
 [Route("api/v1/sales")]
 [Authorize]
-public class SalesController : ControllerBase
+public class SaleController : ControllerBase
 {
     private readonly SaleService _saleService;
 
-    public SalesController(SaleService saleService)
+    public SaleController(SaleService saleService)
     {
         _saleService = saleService;
     }
@@ -27,18 +27,20 @@ public class SalesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleRequest request)
     {
-        var lines = request.Lines.Select(l => new SaleLine
-        {
-            LineId = ObjectId.GenerateNewId().ToString(),
-            ItemId = l.ItemId,
-            ItemCode = l.ItemCode,
-            Description = l.Description,
-            Classification = l.Classification,
-            Condition = l.Condition,
-            Quantity = l.Quantity,
-            UnitPrice = l.UnitPrice,
-            Currency = l.Currency
-        }).ToList();
+        var lines = request
+            .Lines.Select(l => new SaleLine
+            {
+                LineId = ObjectId.GenerateNewId().ToString(),
+                ItemId = l.ItemId,
+                ItemCode = l.ItemCode,
+                Description = l.Description,
+                Classification = l.Classification,
+                Condition = l.Condition,
+                Quantity = l.Quantity,
+                UnitPrice = l.UnitPrice,
+                Currency = l.Currency,
+            })
+            .ToList();
 
         var sale = await _saleService.CreateSaleAsync(
             request.BranchId,
@@ -74,13 +76,18 @@ public class SalesController : ControllerBase
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 100)
+        [FromQuery] int pageSize = 100
+    )
     {
         IEnumerable<Sale> sales;
 
         if (!string.IsNullOrEmpty(branchId) && from.HasValue && to.HasValue)
         {
-            sales = await _saleService.GetSalesByBranchAndDateRangeAsync(branchId, from.Value, to.Value);
+            sales = await _saleService.GetSalesByBranchAndDateRangeAsync(
+                branchId,
+                from.Value,
+                to.Value
+            );
         }
         else if (from.HasValue && to.HasValue)
         {
@@ -93,13 +100,15 @@ public class SalesController : ControllerBase
 
         var totalCount = await _saleService.CountSalesAsync(branchId, from, to);
 
-        return Ok(new SalesListResponse
-        {
-            Items = sales.Select(MapToDto).ToList(),
-            TotalCount = totalCount,
-            Page = page,
-            PageSize = pageSize
-        });
+        return Ok(
+            new SalesListResponse
+            {
+                Items = sales.Select(MapToDto).ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+            }
+        );
     }
 
     /// <summary>
@@ -129,20 +138,22 @@ public class SalesController : ControllerBase
             SaleNumber = sale.SaleNumber,
             BranchId = sale.BranchId,
             SaleDateUtc = sale.SaleDateUtc,
-            Lines = sale.Lines.Select(l => new SaleLineDto
-            {
-                LineId = l.LineId ?? ObjectId.GenerateNewId().ToString(),
-                ItemId = l.ItemId,
-                ItemCode = l.ItemCode,
-                Description = l.Description,
-                Classification = l.Classification,
-                Condition = l.Condition,
-                Quantity = l.Quantity,
-                UnitPrice = l.UnitPrice,
-                Currency = l.Currency,
-                LineTotal = l.LineTotal,
-                InventoryTransactionId = l.InventoryTransactionId
-            }).ToList(),
+            Lines = sale
+                .Lines.Select(l => new SaleLineDto
+                {
+                    LineId = l.LineId ?? ObjectId.GenerateNewId().ToString(),
+                    ItemId = l.ItemId,
+                    ItemCode = l.ItemCode,
+                    Description = l.Description,
+                    Classification = l.Classification,
+                    Condition = l.Condition,
+                    Quantity = l.Quantity,
+                    UnitPrice = l.UnitPrice,
+                    Currency = l.Currency,
+                    LineTotal = l.LineTotal,
+                    InventoryTransactionId = l.InventoryTransactionId,
+                })
+                .ToList(),
             CustomerName = sale.CustomerName,
             CustomerPhone = sale.CustomerPhone,
             Notes = sale.Notes,
@@ -152,7 +163,7 @@ public class SalesController : ControllerBase
             CreatedAtUtc = sale.CreatedAtUtc,
             CreatedBy = sale.CreatedBy,
             ModifiedAtUtc = sale.ModifiedAtUtc,
-            ModifiedBy = sale.ModifiedBy
+            ModifiedBy = sale.ModifiedBy,
         };
     }
 }
