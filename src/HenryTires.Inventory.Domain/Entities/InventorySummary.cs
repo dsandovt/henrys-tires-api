@@ -1,3 +1,4 @@
+using System.Linq;
 using HenryTires.Inventory.Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -19,7 +20,9 @@ public class InventorySummary
 
     public void ApplyTransaction(InventoryTransaction transaction)
     {
-        foreach (var line in transaction.Lines)
+        var relevantLines = transaction.Lines.Where(l => l.ItemCode == ItemCode).ToList();
+
+        foreach (var line in relevantLines)
         {
             var entry = Entries.FirstOrDefault(e => e.Condition == line.Condition);
 
