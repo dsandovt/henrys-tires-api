@@ -312,7 +312,7 @@ public class ReportService : IReportService
 
         var salesTaxAmount = taxableBase * DEFAULT_SALES_TAX_RATE;
         var shopFeeAmount = shopFeeBase * DEFAULT_SHOP_FEE_RATE;
-        var grandTotal = subtotal + salesTaxAmount + shopFeeAmount;
+        var grandTotal = subtotal + salesTaxAmount; // Shop Fee removed from Grand Total
 
         return new InvoiceTotalsDto
         {

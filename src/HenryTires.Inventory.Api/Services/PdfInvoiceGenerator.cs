@@ -127,7 +127,7 @@ public class PdfInvoiceGenerator
                     header.Cell().Element(HeaderStyle).AlignRight().Text("Qty");
                     header.Cell().Element(HeaderStyle).AlignRight().Text("Unit Price");
                     header.Cell().Element(HeaderStyle).AlignRight().Text("Total");
-                    header.Cell().Element(HeaderStyle).AlignCenter().Text("T/F");
+                    header.Cell().Element(HeaderStyle).AlignCenter().Text("Taxable");
 
                     static IContainer HeaderStyle(IContainer container)
                     {
@@ -145,11 +145,9 @@ public class PdfInvoiceGenerator
                     table.Cell().Element(CellStyle).AlignRight().Text($"{line.Currency} {line.UnitPrice:N2}").FontSize(9);
                     table.Cell().Element(CellStyle).AlignRight().Text($"{line.Currency} {line.LineTotal:N2}").FontSize(9);
 
-                    // Tax/Fee indicators
-                    var indicators = "";
-                    if (line.IsTaxable) indicators += "T";
-                    if (line.AppliesShopFee) indicators += (indicators.Length > 0 ? ",F" : "F");
-                    table.Cell().Element(CellStyle).AlignCenter().Text(indicators).FontSize(8).FontColor(Colors.Grey.Darken1);
+                    // Taxable indicator
+                    var taxableText = line.IsTaxable ? "Yes" : "No";
+                    table.Cell().Element(CellStyle).AlignCenter().Text(taxableText).FontSize(8).FontColor(Colors.Grey.Darken1);
 
                     static IContainer CellStyle(IContainer container)
                     {
@@ -196,21 +194,6 @@ public class PdfInvoiceGenerator
                     {
                         row.AutoItem().Width(150).Text($"Sales Tax ({invoice.Totals.SalesTaxRate:P0}):");
                         row.AutoItem().Width(100).AlignRight().Text($"{currency} {invoice.Totals.SalesTaxAmount:N2}");
-                    });
-                }
-
-                // Show shop fee details
-                if (invoice.Totals.ShopFeeBase > 0)
-                {
-                    col.Item().Row(row =>
-                    {
-                        row.AutoItem().Width(150).Text($"Fee Base:");
-                        row.AutoItem().Width(100).AlignRight().Text($"{currency} {invoice.Totals.ShopFeeBase:N2}").FontSize(9).FontColor(Colors.Grey.Darken1);
-                    });
-                    col.Item().Row(row =>
-                    {
-                        row.AutoItem().Width(150).Text($"Shop Fee ({invoice.Totals.ShopFeeRate:P0}):");
-                        row.AutoItem().Width(100).AlignRight().Text($"{currency} {invoice.Totals.ShopFeeAmount:N2}");
                     });
                 }
 
