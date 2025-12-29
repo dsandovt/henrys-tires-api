@@ -16,7 +16,6 @@ builder.Services.AddHttpContextAccessor();
 
 // Add custom services
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddApplicationServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddCorsPolicy();

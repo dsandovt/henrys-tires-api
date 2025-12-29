@@ -3,9 +3,6 @@ using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Infrastructure.Adapters.Identity;
 
-/// <summary>
-/// MongoDB implementation of IIdentityGenerator using ObjectId.
-/// </summary>
 public class MongoIdentityGenerator : IIdentityGenerator
 {
     public string GenerateId()

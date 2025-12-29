@@ -19,9 +19,6 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
-    /// <summary>
-    /// Get all users with optional search and pagination
-    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<UserListResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<UserListResponse>>> GetUsers(
@@ -34,9 +31,6 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<UserListResponse>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get user by ID
-    /// </summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -46,9 +40,6 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<UserDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Create a new user
-    /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -64,9 +55,6 @@ public class UsersController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Update an existing user
-    /// </summary>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -80,9 +68,6 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<UserDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Delete a user
-    /// </summary>
     [HttpDelete("{id}")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -94,9 +79,6 @@ public class UsersController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Toggle user active status
-    /// </summary>
     [HttpPatch("{id}/toggle-status")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

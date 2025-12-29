@@ -22,9 +22,6 @@ public class TransactionsController : ControllerBase
         _transactionService = transactionService;
     }
 
-    /// <summary>
-    /// Create an IN transaction (draft)
-    /// </summary>
     [HttpPost("in")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -40,9 +37,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Create an OUT transaction (draft) - validates stock availability
-    /// </summary>
     [HttpPost("out")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -58,9 +52,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Create an ADJUST transaction (draft)
-    /// </summary>
     [HttpPost("adjust")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -76,9 +67,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Commit a draft transaction - atomically updates transaction and inventory summary
-    /// </summary>
     [HttpPost("{transactionId}/commit")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -93,9 +81,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Cancel a draft transaction
-    /// </summary>
     [HttpPost("{transactionId}/cancel")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -109,9 +94,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get transaction by ID
-    /// </summary>
     [HttpGet("{transactionId}")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -123,9 +105,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get paginated list of transactions for a branch
-    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionListResponse>), StatusCodes.Status200OK)]
     public async Task<
@@ -167,9 +146,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionListResponse>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get inventory summary for an item at a branch
-    /// </summary>
     [HttpGet("inventory/{itemCode}")]
     [ProducesResponseType(typeof(ApiResponse<InventorySummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -190,9 +166,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<InventorySummaryDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get paginated inventory summaries for a branch
-    /// </summary>
     [HttpGet("inventory")]
     [ProducesResponseType(
         typeof(ApiResponse<InventorySummaryListResponse>),

@@ -7,9 +7,6 @@ using HenryTires.Inventory.Domain.Entities;
 
 namespace HenryTires.Inventory.Application.UseCases.Inventory;
 
-/// <summary>
-/// Application service for price management
-/// </summary>
 public class PriceManagementService : IPriceManagementService
 {
     private readonly IItemRepository _itemRepository;
@@ -23,7 +20,8 @@ public class PriceManagementService : IPriceManagementService
         IConsumableItemPriceRepository priceRepository,
         ICurrentUser currentUser,
         IClock clock,
-        IIdentityGenerator identityGenerator)
+        IIdentityGenerator identityGenerator
+    )
     {
         _itemRepository = itemRepository;
         _priceRepository = priceRepository;
@@ -32,12 +30,11 @@ public class PriceManagementService : IPriceManagementService
         _identityGenerator = identityGenerator;
     }
 
-    /// <summary>
-    /// Update price for an item (creates if doesn't exist)
-    /// </summary>
-    public async Task<ConsumableItemPriceDto> UpdateItemPriceAsync(string itemCode, UpdateItemPriceRequest request)
+    public async Task<ConsumableItemPriceDto> UpdateItemPriceAsync(
+        string itemCode,
+        UpdateItemPriceRequest request
+    )
     {
-        // Validate item exists
         var item = await _itemRepository.GetByItemCodeAsync(itemCode);
         if (item == null)
         {
@@ -49,7 +46,6 @@ public class PriceManagementService : IPriceManagementService
             throw new ValidationException($"Item '{itemCode}' is deleted");
         }
 
-        // Validate price
         if (request.NewPrice <= 0)
         {
             throw new ValidationException("Price must be greater than zero");
@@ -60,12 +56,10 @@ public class PriceManagementService : IPriceManagementService
             throw new ValidationException("Currency is required");
         }
 
-        // Get existing price record
         var priceRecord = await _priceRepository.GetByItemCodeAsync(itemCode);
 
         if (priceRecord == null)
         {
-            // Create new price record
             priceRecord = new ConsumableItemPrice
             {
                 Id = _identityGenerator.GenerateId(),
@@ -74,17 +68,15 @@ public class PriceManagementService : IPriceManagementService
                 LatestPrice = request.NewPrice,
                 LatestPriceDateUtc = _clock.UtcNow,
                 UpdatedBy = _currentUser.Username,
-                History = new List<PriceHistoryEntry>()
+                History = new List<PriceHistoryEntry>(),
             };
 
             await _priceRepository.CreateAsync(priceRecord);
         }
         else
         {
-            // Update existing price (domain method handles history)
             priceRecord.UpdatePrice(request.NewPrice, _currentUser.Username, _clock.UtcNow);
 
-            // Update currency if changed
             priceRecord.Currency = request.Currency;
 
             await _priceRepository.UpdateAsync(priceRecord);
@@ -93,27 +85,22 @@ public class PriceManagementService : IPriceManagementService
         return ConsumableItemPriceDto.FromEntity(priceRecord);
     }
 
-    /// <summary>
-    /// Get current price for an item
-    /// </summary>
     public async Task<ConsumableItemPriceDto?> GetItemPriceAsync(string itemCode)
     {
         var priceRecord = await _priceRepository.GetByItemCodeAsync(itemCode);
         return priceRecord == null ? null : ConsumableItemPriceDto.FromEntity(priceRecord);
     }
 
-    /// <summary>
-    /// Get price with full history for an item
-    /// </summary>
-    public async Task<ConsumableItemPriceWithHistoryDto?> GetItemPriceWithHistoryAsync(string itemCode)
+    public async Task<ConsumableItemPriceWithHistoryDto?> GetItemPriceWithHistoryAsync(
+        string itemCode
+    )
     {
         var priceRecord = await _priceRepository.GetByItemCodeAsync(itemCode);
-        return priceRecord == null ? null : ConsumableItemPriceWithHistoryDto.FromEntity(priceRecord);
+        return priceRecord == null
+            ? null
+            : ConsumableItemPriceWithHistoryDto.FromEntity(priceRecord);
     }
 
-    /// <summary>
-    /// Get all item prices (for reports, etc.)
-    /// </summary>
     public async Task<IEnumerable<ConsumableItemPriceDto>> GetAllItemPricesAsync()
     {
         var prices = await _priceRepository.GetAllAsync();

@@ -75,9 +75,11 @@ public class CurrentUserService : ICurrentUser
             if (branchCode == null && BranchId != null)
             {
                 _logger.LogWarning(
-                    "BranchCode claim not found for user {UserId} with BranchId {BranchId}. " +
-                    "This may indicate an old JWT token. User should re-login.",
-                    UserId, BranchId);
+                    "BranchCode claim not found for user {UserId} with BranchId {BranchId}. "
+                        + "This may indicate an old JWT token. User should re-login.",
+                    UserId,
+                    BranchId
+                );
             }
 
             return branchCode;

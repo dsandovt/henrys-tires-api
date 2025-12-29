@@ -13,9 +13,6 @@ public static class ItemDocumentMapper
             ItemCode = document.ItemCode,
             Description = document.Description,
             Classification = document.Classification,
-            Category = document.Category,
-            Brand = document.Brand,
-            Size = document.Size,
             Notes = document.Notes,
             IsActive = document.IsActive,
             IsDeleted = document.IsDeleted,
@@ -24,7 +21,7 @@ public static class ItemDocumentMapper
             CreatedAtUtc = document.CreatedAtUtc,
             CreatedBy = document.CreatedBy,
             ModifiedAtUtc = document.ModifiedAtUtc,
-            ModifiedBy = document.ModifiedBy
+            ModifiedBy = document.ModifiedBy,
         };
     }
 
@@ -36,9 +33,6 @@ public static class ItemDocumentMapper
             ItemCode = entity.ItemCode,
             Description = entity.Description,
             Classification = entity.Classification,
-            Category = entity.Category,
-            Brand = entity.Brand,
-            Size = entity.Size,
             Notes = entity.Notes,
             IsActive = entity.IsActive,
             IsDeleted = entity.IsDeleted,
@@ -47,7 +41,7 @@ public static class ItemDocumentMapper
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedBy = entity.CreatedBy,
             ModifiedAtUtc = entity.ModifiedAtUtc,
-            ModifiedBy = entity.ModifiedBy
+            ModifiedBy = entity.ModifiedBy,
         };
     }
 }

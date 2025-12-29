@@ -23,7 +23,8 @@ public class UserService : IUserService
         IPasswordHasher passwordHasher,
         IClock clock,
         ICurrentUser currentUser,
-        IIdentityGenerator identityGenerator)
+        IIdentityGenerator identityGenerator
+    )
     {
         _userRepository = userRepository;
         _branchRepository = branchRepository;
@@ -43,7 +44,7 @@ public class UserService : IUserService
             Items = users.Select(MapToDto),
             TotalCount = count,
             Page = page,
-            PageSize = pageSize
+            PageSize = pageSize,
         };
     }
 
@@ -60,26 +61,22 @@ public class UserService : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserRequest request)
     {
-        // Validate role
         if (!Enum.TryParse<Role>(request.Role, true, out var role))
         {
             throw new ValidationException($"Invalid role: {request.Role}");
         }
 
-        // Check if username already exists
         var existingUser = await _userRepository.GetByUsernameAsync(request.Username);
         if (existingUser != null)
         {
             throw new ValidationException($"Username '{request.Username}' already exists");
         }
 
-        // Validate BranchUser has branchId
         if (role == Role.Seller && string.IsNullOrEmpty(request.BranchId))
         {
             throw new ValidationException("BranchId is required for BranchUser role");
         }
 
-        // Validate branch exists if provided
         if (!string.IsNullOrEmpty(request.BranchId))
         {
             var branch = await _branchRepository.GetByIdAsync(request.BranchId);
@@ -98,7 +95,7 @@ public class UserService : IUserService
             BranchId = role == Role.Seller ? request.BranchId : null,
             IsActive = request.IsActive,
             CreatedAtUtc = _clock.UtcNow,
-            CreatedBy = _currentUser.Username
+            CreatedBy = _currentUser.Username,
         };
 
         await _userRepository.CreateAsync(user);
@@ -114,7 +111,6 @@ public class UserService : IUserService
             throw new NotFoundException($"User with ID '{id}' not found");
         }
 
-        // Update username if provided
         if (!string.IsNullOrEmpty(request.Username) && request.Username != user.Username)
         {
             var existingUser = await _userRepository.GetByUsernameAsync(request.Username);
@@ -125,13 +121,11 @@ public class UserService : IUserService
             user.Username = request.Username;
         }
 
-        // Update password if provided
         if (!string.IsNullOrEmpty(request.Password))
         {
             user.PasswordHash = _passwordHasher.Hash(request.Password);
         }
 
-        // Update role if provided
         if (!string.IsNullOrEmpty(request.Role))
         {
             if (!Enum.TryParse<Role>(request.Role, true, out var role))
@@ -141,7 +135,6 @@ public class UserService : IUserService
             user.Role = role;
         }
 
-        // Update branchId based on role
         if (user.Role == Role.Seller)
         {
             if (request.BranchId != null)
@@ -151,7 +144,9 @@ public class UserService : IUserService
                     var branch = await _branchRepository.GetByIdAsync(request.BranchId);
                     if (branch == null)
                     {
-                        throw new ValidationException($"Branch with ID '{request.BranchId}' not found");
+                        throw new ValidationException(
+                            $"Branch with ID '{request.BranchId}' not found"
+                        );
                     }
                 }
                 user.BranchId = request.BranchId;
@@ -163,17 +158,14 @@ public class UserService : IUserService
         }
         else
         {
-            // Admin users don't have branchId
             user.BranchId = null;
         }
 
-        // Update isActive if provided
         if (request.IsActive.HasValue)
         {
             user.IsActive = request.IsActive.Value;
         }
 
-        // Update audit fields
         user.ModifiedAtUtc = _clock.UtcNow;
         user.ModifiedBy = _currentUser.Username;
 
@@ -190,7 +182,6 @@ public class UserService : IUserService
             throw new NotFoundException($"User with ID '{id}' not found");
         }
 
-        // Prevent deleting the current user
         if (user.Username == _currentUser.Username)
         {
             throw new BusinessException("Cannot delete your own user account");
@@ -207,7 +198,6 @@ public class UserService : IUserService
             throw new NotFoundException($"User with ID '{id}' not found");
         }
 
-        // Prevent deactivating the current user
         if (user.Username == _currentUser.Username)
         {
             throw new BusinessException("Cannot deactivate your own user account");
@@ -232,7 +222,7 @@ public class UserService : IUserService
             BranchId = user.BranchId,
             IsActive = user.IsActive,
             CreatedAtUtc = user.CreatedAtUtc,
-            CreatedBy = user.CreatedBy
+            CreatedBy = user.CreatedBy,
         };
     }
 }

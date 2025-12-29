@@ -2,9 +2,6 @@ using HenryTires.Inventory.Domain.Entities;
 
 namespace HenryTires.Inventory.Application.DTOs;
 
-/// <summary>
-/// Current price information for an item
-/// </summary>
 public class ConsumableItemPriceDto
 {
     public required string Id { get; set; }
@@ -23,23 +20,17 @@ public class ConsumableItemPriceDto
             Currency = price.Currency,
             LatestPrice = price.LatestPrice,
             LatestPriceDateUtc = price.LatestPriceDateUtc,
-            UpdatedBy = price.UpdatedBy
+            UpdatedBy = price.UpdatedBy,
         };
     }
 }
 
-/// <summary>
-/// Request to update item price
-/// </summary>
 public class UpdateItemPriceRequest
 {
     public required decimal NewPrice { get; set; }
     public required string Currency { get; set; }
 }
 
-/// <summary>
-/// Historical price entry
-/// </summary>
 public class PriceHistoryDto
 {
     public required decimal Price { get; set; }
@@ -52,14 +43,11 @@ public class PriceHistoryDto
         {
             Price = entry.Price,
             DateUtc = entry.DateUtc,
-            UpdatedBy = entry.UpdatedBy
+            UpdatedBy = entry.UpdatedBy,
         };
     }
 }
 
-/// <summary>
-/// Price with full history
-/// </summary>
 public class ConsumableItemPriceWithHistoryDto
 {
     public required string Id { get; set; }
@@ -80,7 +68,7 @@ public class ConsumableItemPriceWithHistoryDto
             LatestPrice = price.LatestPrice,
             LatestPriceDateUtc = price.LatestPriceDateUtc,
             UpdatedBy = price.UpdatedBy,
-            History = price.History.Select(PriceHistoryDto.FromEntity).ToList()
+            History = price.History.Select(PriceHistoryDto.FromEntity).ToList(),
         };
     }
 }

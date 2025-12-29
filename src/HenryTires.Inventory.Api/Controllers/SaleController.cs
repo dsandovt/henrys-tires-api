@@ -18,11 +18,6 @@ public class SaleController : ControllerBase
         _saleService = saleService;
     }
 
-    /// <summary>
-    /// Create a new Sale (Draft status).
-    /// Can include BOTH Goods and Services.
-    /// Does NOT post to inventory yet.
-    /// </summary>
     [HttpPost]
     public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleRequest request)
     {
@@ -30,12 +25,6 @@ public class SaleController : ControllerBase
         return Ok(MapToDto(sale));
     }
 
-    /// <summary>
-    /// Post Sale to inventory.
-    /// - Generates InventoryTransaction (OUT) for Goods ONLY
-    /// - Services are ignored (revenue only)
-    /// - Uses MongoDB transaction for atomicity
-    /// </summary>
     [HttpPost("{id}/post")]
     public async Task<ActionResult<SaleDto>> PostSale(string id)
     {
@@ -43,9 +32,6 @@ public class SaleController : ControllerBase
         return Ok(MapToDto(sale));
     }
 
-    /// <summary>
-    /// Get all Sales with optional filtering
-    /// </summary>
     [HttpGet]
     public async Task<ActionResult<SalesListResponse>> GetSales(
         [FromQuery] string? branchId = null,
@@ -87,9 +73,6 @@ public class SaleController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Get Sale by ID
-    /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<SaleDto>> GetSaleById(string id)
     {
@@ -102,10 +85,6 @@ public class SaleController : ControllerBase
         return Ok(MapToDto(sale));
     }
 
-    // ========================================================================
-    // Helper Methods
-    // ========================================================================
-
     private static SaleDto MapToDto(Sale sale)
     {
         return new SaleDto
@@ -117,7 +96,7 @@ public class SaleController : ControllerBase
             Lines = sale
                 .Lines.Select(l => new SaleLineDto
                 {
-                    LineId = l.LineId!, // LineId is always set by the service
+                    LineId = l.LineId!,
                     ItemId = l.ItemId,
                     ItemCode = l.ItemCode,
                     Description = l.Description,

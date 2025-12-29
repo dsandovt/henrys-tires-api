@@ -1,11 +1,7 @@
 using HenryTires.Inventory.Domain.Entities;
-using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.DTOs;
 
-/// <summary>
-/// Request to create an IN transaction (draft)
-/// </summary>
 public class CreateInTransactionRequest
 {
     public string? BranchCode { get; set; } // Optional for Admin users
@@ -14,9 +10,6 @@ public class CreateInTransactionRequest
     public required List<InTransactionLineRequest> Lines { get; set; }
 }
 
-/// <summary>
-/// Line item for IN transaction
-/// </summary>
 public class InTransactionLineRequest
 {
     public required string ItemCode { get; set; }
@@ -27,9 +20,6 @@ public class InTransactionLineRequest
     public string? PriceNotes { get; set; } // Optional - notes about the price
 }
 
-/// <summary>
-/// Request to create an OUT transaction (draft)
-/// </summary>
 public class CreateOutTransactionRequest
 {
     public string? BranchCode { get; set; } // Optional for Admin users
@@ -38,9 +28,6 @@ public class CreateOutTransactionRequest
     public required List<OutTransactionLineRequest> Lines { get; set; }
 }
 
-/// <summary>
-/// Line item for OUT transaction
-/// </summary>
 public class OutTransactionLineRequest
 {
     public required string ItemCode { get; set; }
@@ -51,9 +38,6 @@ public class OutTransactionLineRequest
     public string? PriceNotes { get; set; } // Optional - reason for price override (e.g., "Manager discount")
 }
 
-/// <summary>
-/// Request to create an ADJUST transaction (draft)
-/// </summary>
 public class CreateAdjustTransactionRequest
 {
     public string? BranchCode { get; set; } // Optional for Admin users
@@ -62,9 +46,6 @@ public class CreateAdjustTransactionRequest
     public required List<AdjustTransactionLineRequest> Lines { get; set; }
 }
 
-/// <summary>
-/// Line item for ADJUST transaction
-/// </summary>
 public class AdjustTransactionLineRequest
 {
     public required string ItemCode { get; set; }
@@ -75,25 +56,16 @@ public class AdjustTransactionLineRequest
     public string? PriceNotes { get; set; } // Optional - notes about the price
 }
 
-/// <summary>
-/// Request to commit a draft transaction
-/// </summary>
 public class CommitTransactionRequest
 {
     public required string TransactionId { get; set; }
 }
 
-/// <summary>
-/// Request to cancel a draft transaction
-/// </summary>
 public class CancelTransactionRequest
 {
     public required string TransactionId { get; set; }
 }
 
-/// <summary>
-/// Updated transaction DTO with new schema
-/// </summary>
 public class NewTransactionDto
 {
     public required string Id { get; set; }
@@ -128,14 +100,11 @@ public class NewTransactionDto
             CreatedAtUtc = transaction.CreatedAtUtc,
             CreatedBy = transaction.CreatedBy,
             ModifiedAtUtc = transaction.ModifiedAtUtc,
-            ModifiedBy = transaction.ModifiedBy
+            ModifiedBy = transaction.ModifiedBy,
         };
     }
 }
 
-/// <summary>
-/// Updated transaction line DTO with full price metadata
-/// </summary>
 public class NewTransactionLineDto
 {
     public required string LineId { get; set; }
@@ -168,14 +137,11 @@ public class NewTransactionLineDto
             LineTotal = line.LineTotal,
             CostOfGoodsSold = line.CostOfGoodsSold,
             PriceNotes = line.PriceNotes,
-            ExecutedAtUtc = line.ExecutedAtUtc
+            ExecutedAtUtc = line.ExecutedAtUtc,
         };
     }
 }
 
-/// <summary>
-/// Paginated transaction list response
-/// </summary>
 public class NewTransactionListResponse
 {
     public required IEnumerable<NewTransactionDto> Items { get; set; }
@@ -184,9 +150,6 @@ public class NewTransactionListResponse
     public required int PageSize { get; set; }
 }
 
-/// <summary>
-/// Inventory summary DTO
-/// </summary>
 public class InventorySummaryDto
 {
     public required string Id { get; set; }
@@ -209,14 +172,11 @@ public class InventorySummaryDto
             OnHandTotal = summary.OnHandTotal,
             ReservedTotal = summary.ReservedTotal,
             Version = summary.Version,
-            UpdatedAtUtc = summary.UpdatedAtUtc
+            UpdatedAtUtc = summary.UpdatedAtUtc,
         };
     }
 }
 
-/// <summary>
-/// Inventory entry by condition
-/// </summary>
 public class InventoryEntryDto
 {
     public required string ItemCondition { get; set; }
@@ -231,14 +191,11 @@ public class InventoryEntryDto
             ItemCondition = entry.Condition.ToString(),
             OnHand = entry.OnHand,
             Reserved = entry.Reserved,
-            LatestEntryDateUtc = entry.LatestEntryDateUtc
+            LatestEntryDateUtc = entry.LatestEntryDateUtc,
         };
     }
 }
 
-/// <summary>
-/// Paginated inventory summary list
-/// </summary>
 public class InventorySummaryListResponse
 {
     public required IEnumerable<InventorySummaryDto> Items { get; set; }
@@ -248,9 +205,6 @@ public class InventorySummaryListResponse
     public StockTotalsDto? GeneralStock { get; set; }
 }
 
-/// <summary>
-/// Stock totals by condition
-/// </summary>
 public class StockTotalsDto
 {
     public required int NewStock { get; set; }

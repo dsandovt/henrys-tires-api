@@ -3,9 +3,6 @@ using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.Ports.Inbound;
 
-/// <summary>
-/// Inbound port for inventory transaction operations.
-/// </summary>
 public interface INewTransactionService
 {
     Task<NewTransactionDto> CreateInTransactionAsync(CreateInTransactionRequest request);
@@ -19,12 +16,14 @@ public interface INewTransactionService
         TransactionType? type,
         TransactionStatus? status,
         int page,
-        int pageSize);
+        int pageSize
+    );
     Task<InventorySummaryDto?> GetInventorySummaryAsync(string? branchCode, string itemCode);
     Task<InventorySummaryListResponse> GetInventorySummariesByBranchAsync(
         string? branchCode,
         string? search,
         ItemCondition? condition,
         int page,
-        int pageSize);
+        int pageSize
+    );
 }

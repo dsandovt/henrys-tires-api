@@ -1,6 +1,10 @@
+using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.Extensions;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Services;
+using HenryTires.Inventory.Infrastructure.Adapters.Identity;
+using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using HenryTires.Inventory.Infrastructure.Data;
 using HenryTires.Inventory.Infrastructure.Repositories;
 using HenryTires.Inventory.Infrastructure.Services;
@@ -28,7 +32,7 @@ public static class ServiceCollectionExtensions
 
         // Configure MongoDB client with SSL settings to fix Linux/Railway SSL issues
         var settings = MongoClientSettings.FromConnectionString(connectionString);
-        settings.SslSettings = new MongoDB.Driver.SslSettings
+        settings.SslSettings = new SslSettings
         {
             EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
             CheckCertificateRevocation = false
@@ -60,10 +64,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUser, CurrentUserService>();
 
         // Transaction and identity adapters
-        services.AddSingleton<HenryTires.Inventory.Application.Ports.Outbound.IUnitOfWork, HenryTires.Inventory.Infrastructure.Adapters.Transactions.MongoUnitOfWork>();
-        services.AddSingleton<HenryTires.Inventory.Application.Ports.Outbound.IIdentityGenerator, HenryTires.Inventory.Infrastructure.Adapters.Identity.MongoIdentityGenerator>();
+        services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
+        services.AddSingleton<IIdentityGenerator, MongoIdentityGenerator>();
 
-        services.AddSingleton<HenryTires.Inventory.Application.Common.ITimezoneConverter, TimezoneConverter>();
+        services.AddSingleton<ITimezoneConverter, TimezoneConverter>();
 
         // Domain Services
         services.AddSingleton<StockAvailabilityService>();

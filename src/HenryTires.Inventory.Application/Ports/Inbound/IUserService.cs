@@ -2,9 +2,6 @@ using HenryTires.Inventory.Application.DTOs;
 
 namespace HenryTires.Inventory.Application.Ports.Inbound;
 
-/// <summary>
-/// Inbound port for user management operations.
-/// </summary>
 public interface IUserService
 {
     Task<UserListResponse> GetUsersAsync(int page, int pageSize, string? search);
