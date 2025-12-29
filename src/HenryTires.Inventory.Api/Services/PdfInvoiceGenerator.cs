@@ -192,7 +192,8 @@ public class PdfInvoiceGenerator
                     });
                     col.Item().Row(row =>
                     {
-                        row.AutoItem().Width(150).Text($"Sales Tax ({invoice.Totals.SalesTaxRate:P0}):");
+                        var taxPercent = Math.Round(invoice.Totals.SalesTaxRate * 100, 0);
+                        row.AutoItem().Width(150).Text($"Sales Tax ({taxPercent}%):");
                         row.AutoItem().Width(100).AlignRight().Text($"{currency} {invoice.Totals.SalesTaxAmount:N2}");
                     });
                 }

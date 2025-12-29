@@ -306,13 +306,27 @@ public class ReportService : IReportService
 
     private InvoiceTotalsDto CalculateInvoiceTotals(List<InvoiceLineDto> lines)
     {
-        var subtotal = lines.Sum(l => l.LineTotal);
-        var taxableBase = lines.Where(l => l.IsTaxable).Sum(l => l.LineTotal);
-        var shopFeeBase = lines.Where(l => l.AppliesShopFee).Sum(l => l.LineTotal);
+        // Grand Total is the sum of all line totals (prices already include tax)
+        var grandTotal = lines.Sum(l => l.LineTotal);
 
+        // For taxable items, extract the tax that's already included in the price
+        var taxableTotal = lines.Where(l => l.IsTaxable).Sum(l => l.LineTotal);
+
+        // Calculate base price (price without tax) from the total that includes tax
+        // Formula: basePrice = totalPrice / (1 + taxRate)
+        // Example: $60.00 / 1.07 = $56.07
+        var taxableBase = taxableTotal / (1 + DEFAULT_SALES_TAX_RATE);
+
+        // Calculate the tax amount
+        // Formula: tax = basePrice * taxRate
+        // Example: $56.07 * 0.07 = $3.93
         var salesTaxAmount = taxableBase * DEFAULT_SALES_TAX_RATE;
+
+        // Calculate subtotal (Grand Total minus tax)
+        var subtotal = grandTotal - salesTaxAmount;
+
+        var shopFeeBase = lines.Where(l => l.AppliesShopFee).Sum(l => l.LineTotal);
         var shopFeeAmount = shopFeeBase * DEFAULT_SHOP_FEE_RATE;
-        var grandTotal = subtotal + salesTaxAmount; // Shop Fee removed from Grand Total
 
         return new InvoiceTotalsDto
         {
