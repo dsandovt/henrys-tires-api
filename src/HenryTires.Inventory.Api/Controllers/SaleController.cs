@@ -3,7 +3,6 @@ using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson; // TODO Phase 4: Remove - controller should not create entities
 
 namespace HenryTires.Inventory.Api.Controllers;
 
@@ -27,30 +26,7 @@ public class SaleController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleRequest request)
     {
-        var lines = request
-            .Lines.Select(l => new SaleLine
-            {
-                LineId = ObjectId.GenerateNewId().ToString(),
-                ItemId = l.ItemId,
-                ItemCode = l.ItemCode,
-                Description = l.Description,
-                Classification = l.Classification,
-                Condition = l.Condition,
-                Quantity = l.Quantity,
-                UnitPrice = l.UnitPrice,
-                Currency = l.Currency,
-            })
-            .ToList();
-
-        var sale = await _saleService.CreateSaleAsync(
-            request.BranchId,
-            request.SaleDateUtc,
-            lines,
-            request.CustomerName,
-            request.CustomerPhone,
-            request.Notes
-        );
-
+        var sale = await _saleService.CreateSaleAsync(request);
         return Ok(MapToDto(sale));
     }
 
@@ -141,7 +117,7 @@ public class SaleController : ControllerBase
             Lines = sale
                 .Lines.Select(l => new SaleLineDto
                 {
-                    LineId = l.LineId ?? ObjectId.GenerateNewId().ToString(),
+                    LineId = l.LineId!, // LineId is always set by the service
                     ItemId = l.ItemId,
                     ItemCode = l.ItemCode,
                     Description = l.Description,

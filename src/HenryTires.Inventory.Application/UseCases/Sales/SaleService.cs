@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Application.Common;
+using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.Ports.Outbound;
@@ -52,18 +53,26 @@ public class SaleService : ISaleService
     /// Validates items and stock availability for Goods.
     /// Does NOT post to inventory yet.
     /// </summary>
-    public async Task<Sale> CreateSaleAsync(
-        string? branchId,
-        DateTime saleDateUtc,
-        List<SaleLine> lines,
-        string? customerName,
-        string? customerPhone,
-        string? notes)
+    public async Task<Sale> CreateSaleAsync(CreateSaleRequest request)
     {
         // Validate branch access
         var validBranchId = _currentUser.BranchId
-            ?? branchId
+            ?? request.BranchId
             ?? throw new ValidationException("Branch is required");
+
+        // Create SaleLine entities from DTOs with generated LineIds
+        var lines = request.Lines.Select(l => new SaleLine
+        {
+            LineId = _identityGenerator.GenerateId(),
+            ItemId = l.ItemId,
+            ItemCode = l.ItemCode,
+            Description = l.Description,
+            Classification = l.Classification,
+            Condition = l.Condition,
+            Quantity = l.Quantity,
+            UnitPrice = l.UnitPrice,
+            Currency = l.Currency,
+        }).ToList();
 
         // Validate all items exist and enrich lines
         foreach (var line in lines)
@@ -116,11 +125,11 @@ public class SaleService : ISaleService
             Id = _identityGenerator.GenerateId(),
             SaleNumber = saleNumber,
             BranchId = validBranchId,
-            SaleDateUtc = saleDateUtc,
+            SaleDateUtc = request.SaleDateUtc,
             Lines = lines,
-            CustomerName = customerName,
-            CustomerPhone = customerPhone,
-            Notes = notes,
+            CustomerName = request.CustomerName,
+            CustomerPhone = request.CustomerPhone,
+            Notes = request.Notes,
             Status = TransactionStatus.Draft,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,

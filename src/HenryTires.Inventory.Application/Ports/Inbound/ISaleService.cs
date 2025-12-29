@@ -1,3 +1,4 @@
+using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Domain.Entities;
 
 namespace HenryTires.Inventory.Application.Ports.Inbound;
@@ -7,13 +8,7 @@ namespace HenryTires.Inventory.Application.Ports.Inbound;
 /// </summary>
 public interface ISaleService
 {
-    Task<Sale> CreateSaleAsync(
-        string? branchId,
-        DateTime saleDateUtc,
-        List<SaleLine> lines,
-        string? customerName,
-        string? customerPhone,
-        string? notes);
+    Task<Sale> CreateSaleAsync(CreateSaleRequest request);
 
     Task<Sale> PostSaleAsync(string saleId);
     Task<Sale?> GetSaleByIdAsync(string saleId);
