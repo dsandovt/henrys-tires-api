@@ -51,11 +51,6 @@ public class PriceManagementService : IPriceManagementService
             throw new ValidationException("Price must be greater than zero");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Currency))
-        {
-            throw new ValidationException("Currency is required");
-        }
-
         var priceRecord = await _priceRepository.GetByItemCodeAsync(itemCode);
 
         if (priceRecord == null)

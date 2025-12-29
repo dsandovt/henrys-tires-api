@@ -603,9 +603,9 @@ public class NewTransactionService : INewTransactionService
 
     private async Task<(
         decimal unitPrice,
-        string currency,
+        Currency currency,
         PriceSource priceSource
-    )> ResolveInPriceAsync(string itemCode, decimal? manualPrice, string? manualCurrency)
+    )> ResolveInPriceAsync(string itemCode, decimal? manualPrice, Currency? manualCurrency)
     {
         if (manualPrice.HasValue)
         {
@@ -613,7 +613,7 @@ public class NewTransactionService : INewTransactionService
             {
                 throw new ValidationException("Unit price cannot be negative");
             }
-            var currency = manualCurrency ?? "USD";
+            var currency = manualCurrency ?? Currency.USD;
             return (manualPrice.Value, currency, PriceSource.Manual);
         }
 
@@ -623,15 +623,15 @@ public class NewTransactionService : INewTransactionService
             return (itemPrice.LatestPrice, itemPrice.Currency, PriceSource.ConsumableItemPrice);
         }
 
-        return (0m, "USD", PriceSource.SystemDefault);
+        return (0m, Currency.USD, PriceSource.SystemDefault);
     }
 
     private async Task<(
         decimal unitPrice,
-        string currency,
+        Currency currency,
         PriceSource priceSource,
         string priceSetByRole
-    )> ResolveOutPriceAsync(string itemCode, decimal? manualPrice, string? manualCurrency)
+    )> ResolveOutPriceAsync(string itemCode, decimal? manualPrice, Currency? manualCurrency)
     {
         if (manualPrice.HasValue)
         {
@@ -650,7 +650,7 @@ public class NewTransactionService : INewTransactionService
 
             return (
                 manualPrice.Value,
-                manualCurrency ?? "USD",
+                manualCurrency ?? Currency.USD,
                 PriceSource.Manual,
                 _currentUser.Role.ToString()
             );
@@ -675,9 +675,9 @@ public class NewTransactionService : INewTransactionService
 
     private async Task<(
         decimal unitPrice,
-        string currency,
+        Currency currency,
         PriceSource priceSource
-    )> ResolveAdjustPriceAsync(string itemCode, decimal? manualPrice, string? manualCurrency)
+    )> ResolveAdjustPriceAsync(string itemCode, decimal? manualPrice, Currency? manualCurrency)
     {
         if (manualPrice.HasValue)
         {
@@ -685,7 +685,7 @@ public class NewTransactionService : INewTransactionService
             {
                 throw new ValidationException("Unit price cannot be negative");
             }
-            return (manualPrice.Value, manualCurrency ?? "USD", PriceSource.Manual);
+            return (manualPrice.Value, manualCurrency ?? Currency.USD, PriceSource.Manual);
         }
 
         var itemPrice = await _priceRepository.GetByItemCodeAsync(itemCode);
@@ -694,6 +694,6 @@ public class NewTransactionService : INewTransactionService
             return (itemPrice.LatestPrice, itemPrice.Currency, PriceSource.ConsumableItemPrice);
         }
 
-        return (0m, "USD", PriceSource.SystemDefault);
+        return (0m, Currency.USD, PriceSource.SystemDefault);
     }
 }

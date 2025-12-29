@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.DTOs;
 
@@ -6,7 +7,7 @@ public class ConsumableItemPriceDto
 {
     public required string Id { get; set; }
     public required string ItemCode { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
     public required string UpdatedBy { get; set; }
@@ -28,7 +29,7 @@ public class ConsumableItemPriceDto
 public class UpdateItemPriceRequest
 {
     public required decimal NewPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
 }
 
 public class PriceHistoryDto
@@ -52,7 +53,7 @@ public class ConsumableItemPriceWithHistoryDto
 {
     public required string Id { get; set; }
     public required string ItemCode { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
     public required string UpdatedBy { get; set; }

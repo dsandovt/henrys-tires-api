@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.DTOs;
 
@@ -16,7 +17,7 @@ public class InTransactionLineRequest
     public required string ItemCondition { get; set; } // "New" or "Used"
     public required int Quantity { get; set; }
     public decimal? UnitPrice { get; set; } // Optional - will use ConsumableItemPrice if not provided
-    public string? Currency { get; set; } // Optional - defaults to USD
+    public Currency? Currency { get; set; } // Optional - defaults to USD
     public string? PriceNotes { get; set; } // Optional - notes about the price
 }
 
@@ -34,7 +35,7 @@ public class OutTransactionLineRequest
     public required string ItemCondition { get; set; } // "New" or "Used"
     public required int Quantity { get; set; }
     public decimal? UnitPrice { get; set; } // Optional - Admin/Supervisor can override selling price
-    public string? Currency { get; set; } // Optional - defaults to USD
+    public Currency? Currency { get; set; } // Optional - defaults to USD
     public string? PriceNotes { get; set; } // Optional - reason for price override (e.g., "Manager discount")
 }
 
@@ -52,7 +53,7 @@ public class AdjustTransactionLineRequest
     public required string ItemCondition { get; set; } // "New" or "Used"
     public required int NewQuantity { get; set; } // The new absolute quantity (not delta)
     public decimal? UnitPrice { get; set; } // Optional - will use ConsumableItemPrice if not provided
-    public string? Currency { get; set; } // Optional - defaults to USD
+    public Currency? Currency { get; set; } // Optional - defaults to USD
     public string? PriceNotes { get; set; } // Optional - notes about the price
 }
 
@@ -112,7 +113,7 @@ public class NewTransactionLineDto
     public required string ItemCondition { get; set; }
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required string PriceSource { get; set; } // ConsumableItemPrice, Manual, Sale, SystemDefault, PurchaseOrder, AverageCost
     public required string PriceSetByRole { get; set; } // Role that set the price (Admin, Supervisor, Seller, System)
     public required string PriceSetByUser { get; set; } // User who set the price

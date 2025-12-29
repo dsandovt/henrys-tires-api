@@ -84,7 +84,7 @@ public class ItemManagementService : IItemManagementService
             {
                 Id = _identityGenerator.GenerateId(),
                 ItemCode = request.ItemCode,
-                Currency = request.Currency ?? "USD",
+                Currency = request.Currency ?? Currency.USD,
                 LatestPrice = request.InitialPrice.Value,
                 LatestPriceDateUtc = _clock.UtcNow,
                 UpdatedBy = _currentUser.Username,

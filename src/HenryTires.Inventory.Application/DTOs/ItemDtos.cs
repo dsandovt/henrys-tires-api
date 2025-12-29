@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.DTOs;
 
@@ -43,7 +44,7 @@ public class CreateItemRequest
     public string? Notes { get; set; }
 
     public decimal? InitialPrice { get; set; }
-    public string? Currency { get; set; }
+    public Currency? Currency { get; set; }
 }
 
 public class UpdateItemRequest

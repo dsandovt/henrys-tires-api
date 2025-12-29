@@ -31,7 +31,7 @@ public class SaleLineDto
     public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required decimal LineTotal { get; set; }
     public string? InventoryTransactionId { get; set; } // Set only for Goods after posting
 }
@@ -55,7 +55,7 @@ public class CreateSaleLineRequest
     public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
 }
 
 public class SalesDashboardDto

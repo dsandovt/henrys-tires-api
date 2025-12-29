@@ -1,10 +1,12 @@
+using HenryTires.Inventory.Domain.Enums;
+
 namespace HenryTires.Inventory.Domain.Entities;
 
 public class ConsumableItemPrice
 {
     public required string Id { get; set; }
     public required string ItemCode { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
     public required string UpdatedBy { get; set; }

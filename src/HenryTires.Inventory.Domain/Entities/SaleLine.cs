@@ -12,7 +12,7 @@ public class SaleLine
     public ItemCondition? Condition { get; set; } // Only for Goods
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public decimal LineTotal => Quantity * UnitPrice;
     public string? InventoryTransactionId { get; set; } // Set if Classification = Good
 }

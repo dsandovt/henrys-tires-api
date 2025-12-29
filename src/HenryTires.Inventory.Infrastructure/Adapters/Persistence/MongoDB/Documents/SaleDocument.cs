@@ -46,6 +46,9 @@ public class SaleLineDocument
 
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+
+    [BsonRepresentation(BsonType.String)]
+    public required Currency Currency { get; set; }
+
     public string? InventoryTransactionId { get; set; }
 }

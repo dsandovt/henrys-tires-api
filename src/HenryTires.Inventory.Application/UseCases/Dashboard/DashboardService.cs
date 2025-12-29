@@ -110,9 +110,9 @@ public class DashboardService
         var inTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
 
         var salesTotal =
-            sales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-            + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-        var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
+            sales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+            + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+        var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
         var todaySales = sales
             .Where(s => s.SaleDateUtc >= todayStart && s.SaleDateUtc <= todayEnd)
@@ -131,14 +131,14 @@ public class DashboardService
             .ToList();
 
         var salesToday =
-            todaySales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-            + todayOutTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-        var purchasesToday = todayPurchases.Sum(t => t.Lines.Sum(l => l.LineTotal));
+            todaySales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+            + todayOutTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+        var purchasesToday = todayPurchases.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
         var currency =
             sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
             ?? transactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-            ?? "USD";
+            ?? Currency.USD;
 
         return Task.FromResult(
             new DashboardSummaryDto
@@ -193,14 +193,14 @@ public class DashboardService
                 .ToList();
 
             var salesTotal =
-                branchSales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-                + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-            var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
+                branchSales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+                + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+            var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
             var currency =
                 branchSales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
                 ?? branchTransactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-                ?? "USD";
+                ?? Currency.USD;
 
             breakdown.Add(
                 new BranchBreakdownDto
@@ -230,10 +230,16 @@ public class DashboardService
 
         var activity = new List<RecentActivityItemDto>();
 
+        // Pre-compile lambda to avoid repeated compilation
+        static decimal CalculateLineTotal(IEnumerable<SaleLine> lines) =>
+            lines.Sum(l => l.LineTotal);
+        static decimal CalculateTransactionLineTotal(IEnumerable<InventoryTransactionLine> lines) =>
+            lines.Sum(l => l.LineTotal);
+
         foreach (var sale in sales)
         {
-            var amount = sale.Lines.Sum(l => l.LineTotal);
-            var currency = sale.Lines.FirstOrDefault()?.Currency ?? "USD";
+            var amount = CalculateLineTotal(sale.Lines);
+            var currency = sale.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto
@@ -256,8 +262,8 @@ public class DashboardService
 
         foreach (var tx in purchaseTransactions)
         {
-            var amount = tx.Lines.Sum(l => l.LineTotal);
-            var currency = tx.Lines.FirstOrDefault()?.Currency ?? "USD";
+            var amount = CalculateTransactionLineTotal(tx.Lines);
+            var currency = tx.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto

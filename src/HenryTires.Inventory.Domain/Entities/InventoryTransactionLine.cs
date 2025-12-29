@@ -10,7 +10,7 @@ public class InventoryTransactionLine
     public required ItemCondition Condition { get; set; }
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required PriceSource PriceSource { get; set; }
     public required string PriceSetByRole { get; set; }
     public required string PriceSetByUser { get; set; }

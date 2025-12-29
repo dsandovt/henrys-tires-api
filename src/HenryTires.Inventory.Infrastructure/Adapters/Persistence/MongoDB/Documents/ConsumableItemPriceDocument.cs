@@ -1,3 +1,4 @@
+using HenryTires.Inventory.Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -10,7 +11,10 @@ public class ConsumableItemPriceDocument
     public required string Id { get; set; }
 
     public required string ItemCode { get; set; }
-    public required string Currency { get; set; }
+
+    [BsonRepresentation(BsonType.String)]
+    public required Currency Currency { get; set; }
+
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
     public required string UpdatedBy { get; set; }
