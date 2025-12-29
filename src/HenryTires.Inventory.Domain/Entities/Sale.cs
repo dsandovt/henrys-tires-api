@@ -1,14 +1,10 @@
 using HenryTires.Inventory.Domain.Common;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
 public class Sale : AuditTrail
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
     public required string Id { get; set; }
     public required string SaleNumber { get; set; }
     public required string BranchId { get; set; }
