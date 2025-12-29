@@ -1,3 +1,4 @@
+using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
@@ -34,7 +35,7 @@ public class SaleController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<SalesListResponse>> GetSales(
+    public async Task<ActionResult<ApiResponse<SalesListResponse>>> GetSales(
         [FromQuery] string? branchId = null,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
@@ -63,15 +64,15 @@ public class SaleController : ControllerBase
 
         var totalCount = await _saleService.CountSalesAsync(branchId, from, to);
 
-        return Ok(
-            new SalesListResponse
-            {
-                Items = sales.Select(MapToDto).ToList(),
-                TotalCount = totalCount,
-                Page = page,
-                PageSize = pageSize,
-            }
-        );
+        var response = new SalesListResponse
+        {
+            Items = sales.Select(MapToDto).ToList(),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+        };
+
+        return Ok(ApiResponse<SalesListResponse>.SuccessResponse(response));
     }
 
     [HttpGet("{id}")]
