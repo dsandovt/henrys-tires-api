@@ -14,38 +14,42 @@ public class SaleService : ISaleService
     private readonly IItemRepository _itemRepository;
     private readonly IInventoryTransactionRepository _transactionRepository;
     private readonly IInventorySummaryRepository _summaryRepository;
+    private readonly IBranchRepository _branchRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IIdentityGenerator _identityGenerator;
+    private readonly ISequenceGenerator _sequenceGenerator;
 
     public SaleService(
         ISaleRepository saleRepository,
         IItemRepository itemRepository,
         IInventoryTransactionRepository transactionRepository,
         IInventorySummaryRepository summaryRepository,
+        IBranchRepository branchRepository,
         ICurrentUser currentUser,
         IClock clock,
         IUnitOfWork unitOfWork,
-        IIdentityGenerator identityGenerator
+        IIdentityGenerator identityGenerator,
+        ISequenceGenerator sequenceGenerator
     )
     {
         _saleRepository = saleRepository;
         _itemRepository = itemRepository;
         _transactionRepository = transactionRepository;
         _summaryRepository = summaryRepository;
+        _branchRepository = branchRepository;
         _currentUser = currentUser;
         _clock = clock;
         _unitOfWork = unitOfWork;
         _identityGenerator = identityGenerator;
+        _sequenceGenerator = sequenceGenerator;
     }
 
     public async Task<Sale> CreateSaleAsync(CreateSaleRequest request)
     {
-        var validBranchId =
-            _currentUser.BranchId
-            ?? request.BranchId
-            ?? throw new ValidationException("Branch is required");
+        // Get branch to construct sale number
+        var branch = await ValidateBranchAccessAsync(request.BranchId);
 
         var lines = request
             .Lines.Select(l => new SaleLine
@@ -59,6 +63,8 @@ public class SaleService : ISaleService
                 Quantity = l.Quantity,
                 UnitPrice = l.UnitPrice,
                 Currency = l.Currency,
+                IsTaxable = l.IsTaxable,
+                AppliesShopFee = l.AppliesShopFee,
             })
             .ToList();
 
@@ -88,10 +94,7 @@ public class SaleService : ISaleService
         var goodsLines = lines.Where(l => l.Classification == Classification.Good).ToList();
         foreach (var line in goodsLines)
         {
-            var summary = await _summaryRepository.GetByKeyAsync(
-                _currentUser.BranchCode!,
-                line.ItemCode
-            );
+            var summary = await _summaryRepository.GetByKeyAsync(branch.Code, line.ItemCode);
 
             if (summary == null)
                 throw new BusinessException($"No stock found for {line.ItemCode} in this branch");
@@ -107,19 +110,22 @@ public class SaleService : ISaleService
             }
         }
 
-        var saleNumber =
-            $"SALE-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId()[..8].ToUpper()}";
+        // Generate sequential sale number per branch: BRANCHCODE-0000001
+        var sequenceName = $"sale-{branch.Code}";
+        var sequence = await _sequenceGenerator.GetNextSequenceAsync(sequenceName);
+        var saleNumber = $"{branch.Code}-{sequence:D7}"; // e.g., WARWICK-0025000
 
         var sale = new Sale
         {
             Id = _identityGenerator.GenerateId(),
             SaleNumber = saleNumber,
-            BranchId = validBranchId,
+            BranchId = branch.Id,
             SaleDateUtc = request.SaleDateUtc,
             Lines = lines,
             CustomerName = request.CustomerName,
             CustomerPhone = request.CustomerPhone,
             Notes = request.Notes,
+            PaymentMethod = request.PaymentMethod,
             Status = TransactionStatus.Draft,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
@@ -143,6 +149,11 @@ public class SaleService : ISaleService
 
             if (sale.Status != TransactionStatus.Draft)
                 throw new BusinessException($"Sale {sale.SaleNumber} is already {sale.Status}");
+
+            // Get branch for the sale to use correct branch code
+            var branch =
+                await _branchRepository.GetByIdAsync(sale.BranchId)
+                ?? throw new NotFoundException($"Branch {sale.BranchId} not found");
 
             var goodsLines = sale
                 .Lines.Where(l => l.Classification == Classification.Good)
@@ -177,7 +188,7 @@ public class SaleService : ISaleService
                 {
                     Id = _identityGenerator.GenerateId(),
                     TransactionNumber = transactionNumber,
-                    BranchCode = _currentUser.BranchCode!,
+                    BranchCode = branch.Code,
                     Type = TransactionType.Out,
                     Status = TransactionStatus.Draft,
                     TransactionDateUtc = sale.SaleDateUtc,
@@ -328,5 +339,44 @@ public class SaleService : ISaleService
     public async Task<int> CountSalesAsync(string? branchId, DateTime? from, DateTime? to)
     {
         return await _saleRepository.CountAsync(branchId, from, to);
+    }
+
+    private async Task<Branch> ValidateBranchAccessAsync(string? branchId)
+    {
+        if (_currentUser.Role == Role.Admin)
+        {
+            if (string.IsNullOrWhiteSpace(branchId))
+            {
+                throw new ValidationException("BranchId is required for Admin users");
+            }
+
+            var branch =
+                await _branchRepository.GetByIdAsync(branchId)
+                ?? throw new NotFoundException($"Branch {branchId} not found");
+
+            return branch;
+        }
+        else
+        {
+            if (_currentUser.BranchId == null)
+            {
+                throw new UnauthorizedException("User does not have an assigned branch");
+            }
+
+            if (_currentUser.BranchCode == null)
+            {
+                throw new UnauthorizedException(
+                    $"User's assigned branch (ID: {_currentUser.BranchId}) not found in system. Please contact administrator to fix branch data."
+                );
+            }
+
+            var branch =
+                await _branchRepository.GetByIdAsync(_currentUser.BranchId)
+                ?? throw new NotFoundException(
+                    $"Branch {_currentUser.BranchId} not found for user {_currentUser.Username}"
+                );
+
+            return branch;
+        }
     }
 }

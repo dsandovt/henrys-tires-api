@@ -4,6 +4,7 @@ using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Services;
 using HenryTires.Inventory.Infrastructure.Adapters.Identity;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Repositories;
 using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using HenryTires.Inventory.Infrastructure.Data;
 using HenryTires.Inventory.Infrastructure.Repositories;
@@ -66,6 +67,7 @@ public static class ServiceCollectionExtensions
         // Transaction and identity adapters
         services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
         services.AddSingleton<IIdentityGenerator, MongoIdentityGenerator>();
+        services.AddSingleton<ISequenceGenerator, MongoSequenceGenerator>();
 
         services.AddSingleton<ITimezoneConverter, TimezoneConverter>();
 

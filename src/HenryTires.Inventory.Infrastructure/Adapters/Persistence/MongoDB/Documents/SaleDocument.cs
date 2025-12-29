@@ -19,6 +19,9 @@ public class SaleDocument
     public string? Notes { get; set; }
 
     [BsonRepresentation(BsonType.String)]
+    public required PaymentMethod PaymentMethod { get; set; }
+
+    [BsonRepresentation(BsonType.String)]
     public TransactionStatus Status { get; set; }
 
     public DateTime? PostedAtUtc { get; set; }
@@ -49,6 +52,9 @@ public class SaleLineDocument
 
     [BsonRepresentation(BsonType.String)]
     public required Currency Currency { get; set; }
+
+    public bool IsTaxable { get; set; } = true;
+    public bool AppliesShopFee { get; set; } = true;
 
     public string? InventoryTransactionId { get; set; }
 }

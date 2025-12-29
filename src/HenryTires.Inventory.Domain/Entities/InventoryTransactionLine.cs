@@ -11,6 +11,8 @@ public class InventoryTransactionLine
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
     public required Currency Currency { get; set; }
+    public bool IsTaxable { get; set; } = true; // Determines if line is included in sales tax calculation
+    public bool AppliesShopFee { get; set; } = true; // Determines if line is included in shop fee calculation
     public required PriceSource PriceSource { get; set; }
     public required string PriceSetByRole { get; set; }
     public required string PriceSetByUser { get; set; }

@@ -2,6 +2,7 @@ using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.UseCases.Auth;
 using HenryTires.Inventory.Application.UseCases.Dashboard;
 using HenryTires.Inventory.Application.UseCases.Inventory;
+using HenryTires.Inventory.Application.UseCases.Reports;
 using HenryTires.Inventory.Application.UseCases.Sales;
 using HenryTires.Inventory.Application.UseCases.Users;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISaleService, SaleService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IReportService, ReportService>();
 
         return services;
     }

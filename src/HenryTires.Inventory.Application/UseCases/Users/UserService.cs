@@ -72,9 +72,9 @@ public class UserService : IUserService
             throw new ValidationException($"Username '{request.Username}' already exists");
         }
 
-        if (role == Role.Seller && string.IsNullOrEmpty(request.BranchId))
+        if ((role == Role.Seller || role == Role.StoreSeller) && string.IsNullOrEmpty(request.BranchId))
         {
-            throw new ValidationException("BranchId is required for BranchUser role");
+            throw new ValidationException($"BranchId is required for {role} role");
         }
 
         if (!string.IsNullOrEmpty(request.BranchId))
@@ -92,7 +92,7 @@ public class UserService : IUserService
             Username = request.Username,
             PasswordHash = _passwordHasher.Hash(request.Password),
             Role = role,
-            BranchId = role == Role.Seller ? request.BranchId : null,
+            BranchId = (role == Role.Seller || role == Role.StoreSeller) ? request.BranchId : null,
             IsActive = request.IsActive,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
@@ -135,7 +135,7 @@ public class UserService : IUserService
             user.Role = role;
         }
 
-        if (user.Role == Role.Seller)
+        if (user.Role == Role.Seller || user.Role == Role.StoreSeller)
         {
             if (request.BranchId != null)
             {
@@ -153,7 +153,7 @@ public class UserService : IUserService
             }
             else if (string.IsNullOrEmpty(user.BranchId))
             {
-                throw new ValidationException("BranchId is required for BranchUser role");
+                throw new ValidationException($"BranchId is required for {user.Role} role");
             }
         }
         else

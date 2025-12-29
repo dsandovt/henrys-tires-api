@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Api.Extensions;
 using HenryTires.Inventory.Api.Middleware;
+using HenryTires.Inventory.Api.Services;
 using HenryTires.Inventory.Infrastructure.Extensions;
 using Serilog;
 
@@ -13,6 +14,14 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
+
+// Add report generation services
+builder.Services.AddSingleton<ExcelReportGenerator>();
+builder.Services.AddSingleton<PdfInvoiceGenerator>();
+
+// Add application services
+builder.Services.AddScoped<HenryTires.Inventory.Application.Ports.ICompanyInfoProvider, CompanyInfoProvider>();
+builder.Services.AddScoped<HenryTires.Inventory.Application.Ports.ICurrentUserService, CurrentUserService>();
 
 // Add custom services
 builder.Services.AddInfrastructure(builder.Configuration);

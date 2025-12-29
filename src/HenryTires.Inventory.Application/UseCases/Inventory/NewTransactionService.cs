@@ -15,36 +15,42 @@ public class NewTransactionService : INewTransactionService
     private readonly IConsumableItemPriceRepository _priceRepository;
     private readonly IInventorySummaryRepository _summaryRepository;
     private readonly IInventoryTransactionRepository _transactionRepository;
+    private readonly IBranchRepository _branchRepository;
     private readonly StockAvailabilityService _stockAvailabilityService;
     private readonly PriceResolutionService _priceResolutionService;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IIdentityGenerator _identityGenerator;
+    private readonly ISequenceGenerator _sequenceGenerator;
 
     public NewTransactionService(
         IItemRepository itemRepository,
         IConsumableItemPriceRepository priceRepository,
         IInventorySummaryRepository summaryRepository,
         IInventoryTransactionRepository transactionRepository,
+        IBranchRepository branchRepository,
         StockAvailabilityService stockAvailabilityService,
         PriceResolutionService priceResolutionService,
         ICurrentUser currentUser,
         IClock clock,
         IUnitOfWork unitOfWork,
-        IIdentityGenerator identityGenerator
+        IIdentityGenerator identityGenerator,
+        ISequenceGenerator sequenceGenerator
     )
     {
         _itemRepository = itemRepository;
         _priceRepository = priceRepository;
         _summaryRepository = summaryRepository;
         _transactionRepository = transactionRepository;
+        _branchRepository = branchRepository;
         _stockAvailabilityService = stockAvailabilityService;
         _priceResolutionService = priceResolutionService;
         _currentUser = currentUser;
         _clock = clock;
         _unitOfWork = unitOfWork;
         _identityGenerator = identityGenerator;
+        _sequenceGenerator = sequenceGenerator;
     }
 
     public async Task<NewTransactionDto> CreateInTransactionAsync(
@@ -52,6 +58,11 @@ public class NewTransactionService : INewTransactionService
     )
     {
         var branchCode = ValidateBranchAccess(request.BranchCode);
+
+        // Get branch entity to construct transaction number
+        var branch =
+            await _branchRepository.GetByCodeAsync(branchCode)
+            ?? throw new NotFoundException($"Branch {branchCode} not found");
 
         var lines = new List<InventoryTransactionLine>();
         foreach (var lineRequest in request.Lines)
@@ -97,6 +108,8 @@ public class NewTransactionService : INewTransactionService
                 Quantity = lineRequest.Quantity,
                 UnitPrice = unitPrice,
                 Currency = currency,
+                IsTaxable = lineRequest.IsTaxable,
+                AppliesShopFee = lineRequest.AppliesShopFee,
                 PriceSource = priceSource,
                 PriceSetByRole = _currentUser.Role.ToString(),
                 PriceSetByUser = _currentUser.Username,
@@ -109,8 +122,10 @@ public class NewTransactionService : INewTransactionService
             lines.Add(line);
         }
 
-        var transactionNumber =
-            $"IN-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId().Substring(0, 8).ToUpper()}";
+        // Generate sequential transaction number per branch: BRANCHCODE-IN-0000001
+        var sequenceName = $"transfer-in-{branch.Code}";
+        var sequence = await _sequenceGenerator.GetNextSequenceAsync(sequenceName);
+        var transactionNumber = $"{branch.Code}-IN-{sequence:D7}"; // e.g., WARWICK-IN-0001234
 
         var transaction = new InventoryTransaction
         {
@@ -121,6 +136,7 @@ public class NewTransactionService : INewTransactionService
             Status = TransactionStatus.Draft,
             TransactionDateUtc = request.TransactionDateUtc,
             Notes = request.Notes,
+            PaymentMethod = request.PaymentMethod,
             Lines = lines,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
@@ -138,6 +154,11 @@ public class NewTransactionService : INewTransactionService
     )
     {
         var branchCode = ValidateBranchAccess(request.BranchCode);
+
+        // Get branch entity to construct transaction number
+        var branch =
+            await _branchRepository.GetByCodeAsync(branchCode)
+            ?? throw new NotFoundException($"Branch {branchCode} not found");
 
         foreach (var lineRequest in request.Lines)
         {
@@ -205,6 +226,8 @@ public class NewTransactionService : INewTransactionService
                 Quantity = lineRequest.Quantity,
                 UnitPrice = unitPrice,
                 Currency = currency,
+                IsTaxable = lineRequest.IsTaxable,
+                AppliesShopFee = lineRequest.AppliesShopFee,
                 PriceSource = priceSource,
                 PriceSetByRole = priceSetByRole,
                 PriceSetByUser = _currentUser.Username,
@@ -217,8 +240,10 @@ public class NewTransactionService : INewTransactionService
             lines.Add(line);
         }
 
-        var transactionNumber =
-            $"OUT-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId().Substring(0, 8).ToUpper()}";
+        // Generate sequential transaction number per branch: BRANCHCODE-OUT-0000001
+        var sequenceName = $"transfer-out-{branch.Code}";
+        var sequence = await _sequenceGenerator.GetNextSequenceAsync(sequenceName);
+        var transactionNumber = $"{branch.Code}-OUT-{sequence:D7}"; // e.g., WARWICK-OUT-0005678
 
         var transaction = new InventoryTransaction
         {
@@ -229,6 +254,7 @@ public class NewTransactionService : INewTransactionService
             Status = TransactionStatus.Draft,
             TransactionDateUtc = request.TransactionDateUtc,
             Notes = request.Notes,
+            PaymentMethod = request.PaymentMethod,
             Lines = lines,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
@@ -291,6 +317,8 @@ public class NewTransactionService : INewTransactionService
                 Quantity = lineRequest.NewQuantity,
                 UnitPrice = unitPrice,
                 Currency = currency,
+                IsTaxable = lineRequest.IsTaxable,
+                AppliesShopFee = lineRequest.AppliesShopFee,
                 PriceSource = priceSource,
                 PriceSetByRole = _currentUser.Role.ToString(),
                 PriceSetByUser = _currentUser.Username,

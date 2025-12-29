@@ -17,6 +17,7 @@ public static class SaleDocumentMapper
             CustomerName = document.CustomerName,
             CustomerPhone = document.CustomerPhone,
             Notes = document.Notes,
+            PaymentMethod = document.PaymentMethod,
             Status = document.Status,
             PostedAtUtc = document.PostedAtUtc,
             PostedBy = document.PostedBy,
@@ -39,6 +40,7 @@ public static class SaleDocumentMapper
             CustomerName = entity.CustomerName,
             CustomerPhone = entity.CustomerPhone,
             Notes = entity.Notes,
+            PaymentMethod = entity.PaymentMethod,
             Status = entity.Status,
             PostedAtUtc = entity.PostedAtUtc,
             PostedBy = entity.PostedBy,
@@ -62,6 +64,8 @@ public static class SaleDocumentMapper
             Quantity = document.Quantity,
             UnitPrice = document.UnitPrice,
             Currency = document.Currency,
+            IsTaxable = document.IsTaxable,
+            AppliesShopFee = document.AppliesShopFee,
             InventoryTransactionId = document.InventoryTransactionId
         };
     }
@@ -79,6 +83,8 @@ public static class SaleDocumentMapper
             Quantity = entity.Quantity,
             UnitPrice = entity.UnitPrice,
             Currency = entity.Currency,
+            IsTaxable = entity.IsTaxable,
+            AppliesShopFee = entity.AppliesShopFee,
             InventoryTransactionId = entity.InventoryTransactionId
         };
     }

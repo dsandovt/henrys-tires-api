@@ -13,6 +13,8 @@ public class SaleLine
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
     public required Currency Currency { get; set; }
+    public bool IsTaxable { get; set; } = true; // Determines if line is included in sales tax calculation
+    public bool AppliesShopFee { get; set; } = true; // Determines if line is included in shop fee calculation
     public decimal LineTotal => Quantity * UnitPrice;
     public string? InventoryTransactionId { get; set; } // Set if Classification = Good
 }

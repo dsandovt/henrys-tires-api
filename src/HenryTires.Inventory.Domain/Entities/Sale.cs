@@ -13,6 +13,7 @@ public class Sale : AuditTrail
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
     public TransactionStatus Status { get; set; }
     public DateTime? PostedAtUtc { get; set; }
     public string? PostedBy { get; set; }

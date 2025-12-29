@@ -21,6 +21,10 @@ public class InventoryTransactionDocument
 
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
+
+    [BsonRepresentation(BsonType.String)]
+    public PaymentMethod? PaymentMethod { get; set; }
+
     public DateTime? CommittedAtUtc { get; set; }
     public string? CommittedBy { get; set; }
     public required List<InventoryTransactionLineDocument> Lines { get; set; }
@@ -50,6 +54,9 @@ public class InventoryTransactionLineDocument
 
     [BsonRepresentation(BsonType.String)]
     public required Currency Currency { get; set; }
+
+    public bool IsTaxable { get; set; } = true;
+    public bool AppliesShopFee { get; set; } = true;
 
     [BsonRepresentation(BsonType.String)]
     public required PriceSource PriceSource { get; set; }

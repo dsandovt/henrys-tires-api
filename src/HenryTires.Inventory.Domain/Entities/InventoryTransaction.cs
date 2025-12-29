@@ -12,6 +12,7 @@ public class InventoryTransaction : AuditTrail
     public required TransactionStatus Status { get; set; }
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
+    public PaymentMethod? PaymentMethod { get; set; }
     public DateTime? CommittedAtUtc { get; set; }
     public string? CommittedBy { get; set; }
     public required List<InventoryTransactionLine> Lines { get; set; }

@@ -1,7 +1,9 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
+using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,25 +15,40 @@ namespace HenryTires.Inventory.Api.Controllers;
 public class SaleController : ControllerBase
 {
     private readonly ISaleService _saleService;
+    private readonly ICurrentUserService _currentUser;
 
-    public SaleController(ISaleService saleService)
+    public SaleController(ISaleService saleService, ICurrentUserService currentUser)
     {
         _saleService = saleService;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
-    public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleRequest request)
+    public async Task<ActionResult<ApiResponse<SaleDto>>> CreateSale([FromBody] CreateSaleRequest request)
     {
+        // StoreSeller users can only create sales for their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Force the sale to be created for the user's branch
+            request.BranchId = _currentUser.BranchId;
+        }
+
         var sale = await _saleService.CreateSaleAsync(request);
         var dto = MapToDto(sale);
-        return CreatedAtAction(nameof(GetSaleById), new { id = sale.Id }, dto);
+        var response = ApiResponse<SaleDto>.SuccessResponse(dto);
+        return CreatedAtAction(nameof(GetSaleById), new { id = sale.Id }, response);
     }
 
     [HttpPost("{id}/post")]
-    public async Task<ActionResult<SaleDto>> PostSale(string id)
+    public async Task<ActionResult<ApiResponse<SaleDto>>> PostSale(string id)
     {
         var sale = await _saleService.PostSaleAsync(id);
-        return Ok(MapToDto(sale));
+        var dto = MapToDto(sale);
+        return Ok(ApiResponse<SaleDto>.SuccessResponse(dto));
     }
 
     [HttpGet]
@@ -43,6 +60,17 @@ public class SaleController : ControllerBase
         [FromQuery] int pageSize = 100
     )
     {
+        // StoreSeller users can only view sales from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Override branchId parameter - force to user's branch
+            branchId = _currentUser.BranchId;
+        }
+
         IEnumerable<Sale> sales;
 
         if (!string.IsNullOrEmpty(branchId) && from.HasValue && to.HasValue)
@@ -76,7 +104,7 @@ public class SaleController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<SaleDto>> GetSaleById(string id)
+    public async Task<ActionResult<ApiResponse<SaleDto>>> GetSaleById(string id)
     {
         var sale = await _saleService.GetSaleByIdAsync(id);
         if (sale == null)
@@ -84,7 +112,22 @@ public class SaleController : ControllerBase
             return NotFound();
         }
 
-        return Ok(MapToDto(sale));
+        // StoreSeller users can only view sales from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+
+            if (sale.BranchId != _currentUser.BranchId)
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("Access denied: Sale belongs to a different branch"));
+            }
+        }
+
+        var dto = MapToDto(sale);
+        return Ok(ApiResponse<SaleDto>.SuccessResponse(dto));
     }
 
     private static SaleDto MapToDto(Sale sale)
@@ -114,6 +157,7 @@ public class SaleController : ControllerBase
             CustomerName = sale.CustomerName,
             CustomerPhone = sale.CustomerPhone,
             Notes = sale.Notes,
+            PaymentMethod = sale.PaymentMethod,
             Status = sale.Status,
             PostedAtUtc = sale.PostedAtUtc,
             PostedBy = sale.PostedBy,

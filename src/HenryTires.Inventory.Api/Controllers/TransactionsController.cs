@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
+using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -16,10 +17,12 @@ namespace HenryTires.Inventory.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly INewTransactionService _transactionService;
+    private readonly ICurrentUserService _currentUser;
 
-    public TransactionsController(INewTransactionService transactionService)
+    public TransactionsController(INewTransactionService transactionService, ICurrentUserService currentUser)
     {
         _transactionService = transactionService;
+        _currentUser = currentUser;
     }
 
     [HttpPost("in")]
@@ -154,6 +157,17 @@ public class TransactionsController : ControllerBase
         [FromQuery] string? branchCode = null
     )
     {
+        // StoreSeller users can only view inventory from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Override branchCode parameter - force to user's branch
+            branchCode = _currentUser.BranchCode;
+        }
+
         var result = await _transactionService.GetInventorySummaryAsync(branchCode, itemCode);
         if (result == null)
         {
@@ -181,6 +195,17 @@ public class TransactionsController : ControllerBase
         [FromQuery] int pageSize = 20
     )
     {
+        // StoreSeller users can only view inventory from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Override branchCode parameter - force to user's branch
+            branchCode = _currentUser.BranchCode;
+        }
+
         ItemCondition? conditionEnum = null;
         if (
             !string.IsNullOrWhiteSpace(condition)
