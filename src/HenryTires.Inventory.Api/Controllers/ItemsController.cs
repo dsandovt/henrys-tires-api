@@ -1,6 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Inventory;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,9 +14,9 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize]
 public class ItemsController : ControllerBase
 {
-    private readonly ItemManagementService _itemService;
+    private readonly IItemManagementService _itemService;
 
-    public ItemsController(ItemManagementService itemService)
+    public ItemsController(IItemManagementService itemService)
     {
         _itemService = itemService;
     }

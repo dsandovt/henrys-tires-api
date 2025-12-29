@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
@@ -15,7 +16,7 @@ namespace HenryTires.Inventory.Application.UseCases.Sales;
 /// - Services are revenue-only, no inventory impact
 /// - ONE Sale may generate ONE InventoryTransaction with ONLY goods lines
 /// </summary>
-public class SaleService
+public class SaleService : ISaleService
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IItemRepository _itemRepository;

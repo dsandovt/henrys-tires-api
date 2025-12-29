@@ -1,6 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Auth;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +10,10 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly AuthService _authService;
+    private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
 
-    public AuthController(AuthService authService, IConfiguration configuration)
+    public AuthController(IAuthService authService, IConfiguration configuration)
     {
         _authService = authService;
         _configuration = configuration;

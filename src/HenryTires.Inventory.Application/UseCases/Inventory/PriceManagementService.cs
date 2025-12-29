@@ -1,6 +1,7 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 
@@ -9,7 +10,7 @@ namespace HenryTires.Inventory.Application.UseCases.Inventory;
 /// <summary>
 /// Application service for price management
 /// </summary>
-public class PriceManagementService
+public class PriceManagementService : IPriceManagementService
 {
     private readonly IItemRepository _itemRepository;
     private readonly IConsumableItemPriceRepository _priceRepository;

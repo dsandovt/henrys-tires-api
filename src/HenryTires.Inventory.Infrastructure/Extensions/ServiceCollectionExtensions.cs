@@ -69,11 +69,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StockAvailabilityService>();
         services.AddSingleton<PriceResolutionService>();
 
-        // Application Services (new clean architecture)
-        services.AddScoped<NewTransactionService>();
-        services.AddScoped<ItemManagementService>();
-        services.AddScoped<PriceManagementService>();
-        services.AddScoped<HenryTires.Inventory.Application.UseCases.Sales.SaleService>();
+        // Application Services (inbound ports)
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IAuthService, HenryTires.Inventory.Application.UseCases.Auth.AuthService>();
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.INewTransactionService, HenryTires.Inventory.Application.UseCases.Inventory.NewTransactionService>();
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IItemManagementService, HenryTires.Inventory.Application.UseCases.Inventory.ItemManagementService>();
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IPriceManagementService, HenryTires.Inventory.Application.UseCases.Inventory.PriceManagementService>();
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.ISaleService, HenryTires.Inventory.Application.UseCases.Sales.SaleService>();
+        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IUserService, HenryTires.Inventory.Application.UseCases.Users.UserService>();
 
         return services;
     }

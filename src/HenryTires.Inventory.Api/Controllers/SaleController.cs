@@ -1,9 +1,9 @@
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Sales;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
+using MongoDB.Bson; // TODO Phase 4: Remove - controller should not create entities
 
 namespace HenryTires.Inventory.Api.Controllers;
 
@@ -12,9 +12,9 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize]
 public class SaleController : ControllerBase
 {
-    private readonly SaleService _saleService;
+    private readonly ISaleService _saleService;
 
-    public SaleController(SaleService saleService)
+    public SaleController(ISaleService saleService)
     {
         _saleService = saleService;
     }

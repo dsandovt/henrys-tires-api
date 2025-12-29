@@ -1,6 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Users;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,9 +12,9 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
 public class UsersController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserService _userService;
 
-    public UsersController(UserService userService)
+    public UsersController(IUserService userService)
     {
         _userService = userService;
     }

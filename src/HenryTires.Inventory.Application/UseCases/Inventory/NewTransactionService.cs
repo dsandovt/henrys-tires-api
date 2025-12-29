@@ -1,6 +1,7 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
@@ -11,7 +12,7 @@ namespace HenryTires.Inventory.Application.UseCases.Inventory;
 /// <summary>
 /// Application service for new transaction flows with clean architecture
 /// </summary>
-public class NewTransactionService
+public class NewTransactionService : INewTransactionService
 {
     private readonly IItemRepository _itemRepository;
     private readonly IConsumableItemPriceRepository _priceRepository;

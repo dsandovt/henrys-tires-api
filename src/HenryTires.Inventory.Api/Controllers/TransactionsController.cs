@@ -1,6 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Inventory;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +15,9 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize]
 public class TransactionsController : ControllerBase
 {
-    private readonly NewTransactionService _transactionService;
+    private readonly INewTransactionService _transactionService;
 
-    public TransactionsController(NewTransactionService transactionService)
+    public TransactionsController(INewTransactionService transactionService)
     {
         _transactionService = transactionService;
     }
