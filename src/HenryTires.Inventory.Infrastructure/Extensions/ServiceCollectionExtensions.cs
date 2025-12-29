@@ -1,5 +1,5 @@
+using HenryTires.Inventory.Application.Extensions;
 using HenryTires.Inventory.Application.Ports;
-using HenryTires.Inventory.Application.UseCases.Inventory;
 using HenryTires.Inventory.Domain.Services;
 using HenryTires.Inventory.Infrastructure.Data;
 using HenryTires.Inventory.Infrastructure.Repositories;
@@ -69,13 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StockAvailabilityService>();
         services.AddSingleton<PriceResolutionService>();
 
-        // Application Services (inbound ports)
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IAuthService, HenryTires.Inventory.Application.UseCases.Auth.AuthService>();
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.INewTransactionService, HenryTires.Inventory.Application.UseCases.Inventory.NewTransactionService>();
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IItemManagementService, HenryTires.Inventory.Application.UseCases.Inventory.ItemManagementService>();
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IPriceManagementService, HenryTires.Inventory.Application.UseCases.Inventory.PriceManagementService>();
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.ISaleService, HenryTires.Inventory.Application.UseCases.Sales.SaleService>();
-        services.AddScoped<HenryTires.Inventory.Application.Ports.Inbound.IUserService, HenryTires.Inventory.Application.UseCases.Users.UserService>();
+        // Application Services (registered in Application layer)
+        services.AddApplicationServices();
 
         return services;
     }
