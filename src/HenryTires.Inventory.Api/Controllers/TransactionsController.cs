@@ -149,11 +149,11 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionListResponse>.SuccessResponse(result));
     }
 
-    [HttpGet("inventory/{itemCode}")]
+    [HttpGet("inventory-summary")]
     [ProducesResponseType(typeof(ApiResponse<InventorySummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<InventorySummaryDto?>>> GetInventorySummary(
-        string itemCode,
+        [FromQuery] string itemCode,
         [FromQuery] string? branchCode = null
     )
     {
