@@ -18,7 +18,7 @@ public class ExcelReportGenerator
         // Report info
         int currentRow = 2;
         worksheet.Cell(currentRow, 1).Value = "Generated:";
-        worksheet.Cell(currentRow, 2).Value = report.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss UTC");
+        worksheet.Cell(currentRow, 2).Value = report.GeneratedAtUtc.ToString("MM/dd/yyyy HH:mm:ss UTC");
         currentRow++;
 
         if (!string.IsNullOrEmpty(report.BranchCode))
@@ -117,15 +117,15 @@ public class ExcelReportGenerator
         // Report info
         int currentRow = 2;
         worksheet.Cell(currentRow, 1).Value = "Generated:";
-        worksheet.Cell(currentRow, 2).Value = report.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss UTC");
+        worksheet.Cell(currentRow, 2).Value = report.GeneratedAtUtc.ToString("MM/dd/yyyy HH:mm:ss UTC");
         currentRow++;
 
         if (report.FromDateUtc.HasValue || report.ToDateUtc.HasValue)
         {
             worksheet.Cell(currentRow, 1).Value = "Period:";
             var period = "";
-            if (report.FromDateUtc.HasValue) period += $"From {report.FromDateUtc.Value:yyyy-MM-dd}";
-            if (report.ToDateUtc.HasValue) period += $" To {report.ToDateUtc.Value:yyyy-MM-dd}";
+            if (report.FromDateUtc.HasValue) period += $"From {report.FromDateUtc.Value:MM/dd/yyyy}";
+            if (report.ToDateUtc.HasValue) period += $" To {report.ToDateUtc.Value:MM/dd/yyyy}";
             worksheet.Cell(currentRow, 2).Value = period;
             currentRow++;
         }
@@ -191,8 +191,8 @@ public class ExcelReportGenerator
                     worksheet.Cell(currentRow, 2).Value = transaction.BranchCode;
                     worksheet.Cell(currentRow, 3).Value = transaction.Type;
                     worksheet.Cell(currentRow, 4).Value = transaction.Status;
-                    worksheet.Cell(currentRow, 5).Value = transaction.TransactionDateUtc.ToString("yyyy-MM-dd");
-                    worksheet.Cell(currentRow, 6).Value = transaction.CommittedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "";
+                    worksheet.Cell(currentRow, 5).Value = transaction.TransactionDateUtc.ToString("MM/dd/yyyy");
+                    worksheet.Cell(currentRow, 6).Value = transaction.CommittedAtUtc?.ToString("MM/dd/yyyy HH:mm") ?? "";
                     firstLine = false;
                 }
 

@@ -24,7 +24,7 @@ public class PdfInvoiceGenerator
                 page.Footer().AlignCenter().Text(text =>
                 {
                     text.Span("Generated on ");
-                    text.Span(invoice.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss UTC"));
+                    text.Span(invoice.GeneratedAtUtc.ToString("MM/dd/yyyy HH:mm:ss UTC"));
                     text.Span(" | Page ");
                     text.CurrentPageNumber();
                     text.Span(" of ");
@@ -73,7 +73,7 @@ public class PdfInvoiceGenerator
                     col.Spacing(3);
                     col.Item().Text("INVOICE").FontSize(14).SemiBold();
                     col.Item().Text($"Invoice #: {invoice.InvoiceNumber}").FontSize(10);
-                    col.Item().Text($"Date: {invoice.InvoiceDateUtc:yyyy-MM-dd}").FontSize(10);
+                    col.Item().Text($"Date: {invoice.InvoiceDateUtc:MM/dd/yyyy}").FontSize(10);
                     col.Item().Text($"Branch: {invoice.BranchCode} - {invoice.BranchName}").FontSize(10);
                     col.Item().Text($"Payment Method: {invoice.PaymentMethod}").FontSize(10);
                 });
