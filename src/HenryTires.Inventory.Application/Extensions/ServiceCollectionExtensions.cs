@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.UseCases.Auth;
+using HenryTires.Inventory.Application.UseCases.Dashboard;
 using HenryTires.Inventory.Application.UseCases.Inventory;
 using HenryTires.Inventory.Application.UseCases.Sales;
 using HenryTires.Inventory.Application.UseCases.Users;
@@ -21,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPriceManagementService, PriceManagementService>();
         services.AddScoped<ISaleService, SaleService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IDashboardService, DashboardService>();
 
         return services;
     }

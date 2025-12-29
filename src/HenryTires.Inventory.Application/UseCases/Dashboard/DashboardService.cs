@@ -1,11 +1,12 @@
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.UseCases.Dashboard;
 
-public class DashboardService
+public class DashboardService : IDashboardService
 {
     private readonly IInventoryTransactionRepository _transactionRepository;
     private readonly ISaleRepository _saleRepository;

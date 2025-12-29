@@ -1,6 +1,6 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Dashboard;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,9 +12,9 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class DashboardController : ControllerBase
 {
-    private readonly DashboardService _dashboardService;
+    private readonly IDashboardService _dashboardService;
 
-    public DashboardController(DashboardService dashboardService)
+    public DashboardController(IDashboardService dashboardService)
     {
         _dashboardService = dashboardService;
     }

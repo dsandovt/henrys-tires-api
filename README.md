@@ -44,19 +44,20 @@ docker-compose up -d
 docker-compose logs -f api
 ```
 
-The API will be available at **http://localhost:5000**
+The API will be available at **<http://localhost:5000>**
 
 ### 2. Access Swagger UI
 
-Navigate to: **http://localhost:5000/swagger**
+Navigate to: **<http://localhost:5000/swagger>**
 
 ### 3. Seed Development Data
 
 ```bash
-curl -X POST http://localhost:5000/api/auth/seed
+curl -X POST http://localhost:5099/api/auth/seed
 ```
 
 This creates:
+
 - 5 branches (Mercury, Williamsburg, Warwick, Jefferson, Pembroke)
 - 1 admin user: `admin` / `admin123`
 - 5 branch users: `mercury` / `mercury123`, `williamsburg` / `williamsburg123`, etc.
@@ -64,15 +65,16 @@ This creates:
 ### 4. Login and Get Token
 
 ```bash
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X POST http://localhost:5099/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "admin123"
+    "password": "password"
   }'
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -127,6 +129,7 @@ Edit `src/HenryTires.Inventory.Api/appsettings.Development.json`:
 ### 1. Set Up MongoDB Replica Set
 
 **Option A: Use MongoDB Atlas** (Recommended)
+
 - Already configured as a replica set
 - Just use your connection URI
 
@@ -156,7 +159,7 @@ dotnet run
 dotnet watch run
 ```
 
-API runs at: **https://localhost:5001** (HTTPS) or **http://localhost:5000** (HTTP)
+API runs at: **<https://localhost:5001>** (HTTPS) or **<http://localhost:5000>** (HTTP)
 
 ---
 
@@ -165,6 +168,7 @@ API runs at: **https://localhost:5001** (HTTPS) or **http://localhost:5000** (HT
 ### Authentication
 
 #### Login
+
 ```bash
 POST /api/auth/login
 Content-Type: application/json
@@ -176,6 +180,7 @@ Content-Type: application/json
 ```
 
 #### Seed Development Data (Development Only)
+
 ```bash
 POST /api/auth/seed
 ```
@@ -185,12 +190,14 @@ POST /api/auth/seed
 ### Branches
 
 #### Get All Branches
+
 ```bash
 GET /api/branches
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -210,6 +217,7 @@ Authorization: Bearer <token>
 ### Products
 
 #### Create Product
+
 ```bash
 POST /api/products
 Authorization: Bearer <token>
@@ -222,12 +230,14 @@ Content-Type: application/json
 ```
 
 #### Search Products
+
 ```bash
 GET /api/products?search=225&page=1&pageSize=20
 Authorization: Bearer <token>
 ```
 
 #### Get Product by ID
+
 ```bash
 GET /api/products/{productId}
 Authorization: Bearer <token>
@@ -240,6 +250,7 @@ Authorization: Bearer <token>
 #### Create Transaction (Draft)
 
 **As Mercury Branch User:**
+
 ```bash
 POST /api/inventory/transactions
 Authorization: Bearer <mercury-user-token>
@@ -261,6 +272,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -286,12 +298,14 @@ Authorization: Bearer <token>
 ```
 
 **This will:**
+
 - Validate product existence
 - For OUT transactions: Check sufficient stock (prevent negative inventory)
 - Update `InventoryBalance` atomically via MongoDB transaction
 - Mark transaction as `Posted` (immutable)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -312,6 +326,7 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `branchId` - Filter by branch (required for Admin, ignored for BranchUser)
 - `from` - Start date (YYYY-MM-DD)
 - `to` - End date (YYYY-MM-DD)
@@ -341,12 +356,14 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `branchId` - Required for Admin; auto-filled for BranchUser
 - `search` - Search by product code/description
 - `condition` - `New` or `Used`
 - `page`, `pageSize` - Pagination
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -380,10 +397,12 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `branchId` - Required for Admin; auto-filled for BranchUser
 - `from`, `to` - Date range (optional)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -498,6 +517,7 @@ All errors follow this format:
 ```
 
 **HTTP Status Codes:**
+
 - `400 Bad Request` - Validation errors
 - `401 Unauthorized` - Missing or invalid JWT token
 - `403 Forbidden` - User doesn't have permission (branch access)
@@ -512,15 +532,18 @@ All errors follow this format:
 ### Project Structure
 
 - **Domain Layer** (`HenryTires.Inventory.Domain`)
+
   - Pure business entities and enums
   - No external dependencies
 
 - **Application Layer** (`HenryTires.Inventory.Application`)
+
   - Use cases (services)
   - Ports (interfaces)
   - DTOs and mappings
 
 - **Infrastructure Layer** (`HenryTires.Inventory.Infrastructure`)
+
   - MongoDB repositories
   - JWT token service
   - Password hashing
@@ -533,7 +556,7 @@ All errors follow this format:
 
 ### Running Tests
 
-*(Not implemented in MVP, but infrastructure is test-friendly)*
+_(Not implemented in MVP, but infrastructure is test-friendly)_
 
 ```bash
 dotnet test
@@ -542,6 +565,7 @@ dotnet test
 ### Database Initialization
 
 The API automatically:
+
 1. Creates MongoDB collections and indexes on startup
 2. Seeds 5 branches (if not already present)
 3. Validates MongoDB is running as a replica set
@@ -567,6 +591,7 @@ The API automatically:
 **Error**: `Server selection timeout`
 
 **Solution**: Ensure MongoDB is running and accessible:
+
 ```bash
 # Check Docker container
 docker ps | grep mongo
@@ -583,6 +608,7 @@ mongosh "mongodb://localhost:27017/?replicaSet=rs0"
 **Error**: `Transaction numbers are only allowed on a replica set member or mongos`
 
 **Solution**: Initialize replica set manually:
+
 ```bash
 docker exec -it henrytires-mongodb mongosh
 > rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]})

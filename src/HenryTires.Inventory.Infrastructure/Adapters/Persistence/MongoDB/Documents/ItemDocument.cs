@@ -16,9 +16,6 @@ public class ItemDocument
     [BsonRepresentation(BsonType.String)]
     public required Classification Classification { get; set; }
 
-    public string? Category { get; set; }
-    public string? Brand { get; set; }
-    public string? Size { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }

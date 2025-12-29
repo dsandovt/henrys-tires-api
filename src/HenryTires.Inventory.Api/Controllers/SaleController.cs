@@ -22,7 +22,8 @@ public class SaleController : ControllerBase
     public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleRequest request)
     {
         var sale = await _saleService.CreateSaleAsync(request);
-        return Ok(MapToDto(sale));
+        var dto = MapToDto(sale);
+        return CreatedAtAction(nameof(GetSaleById), new { id = sale.Id }, dto);
     }
 
     [HttpPost("{id}/post")]
