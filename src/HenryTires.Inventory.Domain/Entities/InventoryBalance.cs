@@ -1,13 +1,9 @@
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
 public class InventoryBalance
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
     public required string Id { get; set; }
     public required string BranchId { get; set; }
     public required string ItemId { get; set; }

@@ -1,14 +1,9 @@
-using System.Linq;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
 public class InventorySummary
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
     public required string Id { get; set; }
     public required string BranchCode { get; set; }
     public required string ItemCode { get; set; }
@@ -71,28 +66,10 @@ public class InventorySummary
     }
 }
 
-/// <summary>
-/// Inventory entry for a specific condition
-/// </summary>
 public class InventoryEntry
 {
-    /// <summary>
-    /// Condition (New/Used)
-    /// </summary>
     public required ItemCondition Condition { get; set; }
-
-    /// <summary>
-    /// Quantity on hand
-    /// </summary>
     public required int OnHand { get; set; }
-
-    /// <summary>
-    /// Quantity reserved (for future orders)
-    /// </summary>
     public required int Reserved { get; set; }
-
-    /// <summary>
-    /// When this entry was last updated
-    /// </summary>
     public required DateTime LatestEntryDateUtc { get; set; }
 }

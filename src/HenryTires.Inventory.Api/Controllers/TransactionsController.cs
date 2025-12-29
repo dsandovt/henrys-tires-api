@@ -1,6 +1,7 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
-using HenryTires.Inventory.Application.UseCases.Inventory;
+using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,16 +16,15 @@ namespace HenryTires.Inventory.Api.Controllers;
 [Authorize]
 public class TransactionsController : ControllerBase
 {
-    private readonly NewTransactionService _transactionService;
+    private readonly INewTransactionService _transactionService;
+    private readonly ICurrentUserService _currentUser;
 
-    public TransactionsController(NewTransactionService transactionService)
+    public TransactionsController(INewTransactionService transactionService, ICurrentUserService currentUser)
     {
         _transactionService = transactionService;
+        _currentUser = currentUser;
     }
 
-    /// <summary>
-    /// Create an IN transaction (draft)
-    /// </summary>
     [HttpPost("in")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -40,9 +40,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Create an OUT transaction (draft) - validates stock availability
-    /// </summary>
     [HttpPost("out")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -58,9 +55,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Create an ADJUST transaction (draft)
-    /// </summary>
     [HttpPost("adjust")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -76,9 +70,6 @@ public class TransactionsController : ControllerBase
         );
     }
 
-    /// <summary>
-    /// Commit a draft transaction - atomically updates transaction and inventory summary
-    /// </summary>
     [HttpPost("{transactionId}/commit")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -93,9 +84,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Cancel a draft transaction
-    /// </summary>
     [HttpPost("{transactionId}/cancel")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -109,9 +97,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get transaction by ID
-    /// </summary>
     [HttpGet("{transactionId}")]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -123,9 +108,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get paginated list of transactions for a branch
-    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<NewTransactionListResponse>), StatusCodes.Status200OK)]
     public async Task<
@@ -167,17 +149,25 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<NewTransactionListResponse>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get inventory summary for an item at a branch
-    /// </summary>
-    [HttpGet("inventory/{itemCode}")]
+    [HttpGet("inventory-summary")]
     [ProducesResponseType(typeof(ApiResponse<InventorySummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<InventorySummaryDto?>>> GetInventorySummary(
-        string itemCode,
+        [FromQuery] string itemCode,
         [FromQuery] string? branchCode = null
     )
     {
+        // StoreSeller users can only view inventory from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Override branchCode parameter - force to user's branch
+            branchCode = _currentUser.BranchCode;
+        }
+
         var result = await _transactionService.GetInventorySummaryAsync(branchCode, itemCode);
         if (result == null)
         {
@@ -190,9 +180,6 @@ public class TransactionsController : ControllerBase
         return Ok(ApiResponse<InventorySummaryDto>.SuccessResponse(result));
     }
 
-    /// <summary>
-    /// Get paginated inventory summaries for a branch
-    /// </summary>
     [HttpGet("inventory")]
     [ProducesResponseType(
         typeof(ApiResponse<InventorySummaryListResponse>),
@@ -208,6 +195,17 @@ public class TransactionsController : ControllerBase
         [FromQuery] int pageSize = 20
     )
     {
+        // StoreSeller users can only view inventory from their own branch
+        if (_currentUser.UserRole == Role.StoreSeller)
+        {
+            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            {
+                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+            }
+            // Override branchCode parameter - force to user's branch
+            branchCode = _currentUser.BranchCode;
+        }
+
         ItemCondition? conditionEnum = null;
         if (
             !string.IsNullOrWhiteSpace(condition)

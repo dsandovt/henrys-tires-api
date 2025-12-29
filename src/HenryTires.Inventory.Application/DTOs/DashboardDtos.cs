@@ -1,3 +1,5 @@
+using HenryTires.Inventory.Domain.Enums;
+
 namespace HenryTires.Inventory.Application.DTOs;
 
 public class DashboardDataDto
@@ -24,7 +26,7 @@ public class DashboardSummaryDto
     public int PurchaseTransactions { get; set; }
 
     // Metadata
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required DateTime StartDate { get; set; }
     public required DateTime EndDate { get; set; }
 }
@@ -38,7 +40,7 @@ public class BranchBreakdownDto
     public decimal NetTotal { get; set; }
     public int SalesTransactionCount { get; set; }
     public int PurchaseTransactionCount { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
 }
 
 public class RecentActivityItemDto
@@ -48,7 +50,7 @@ public class RecentActivityItemDto
     public required string Type { get; set; } // "Sale" or "Purchase"
     public required string Status { get; set; }
     public decimal Amount { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required string BranchCode { get; set; }
     public required string BranchName { get; set; }
     public required DateTime TransactionDateUtc { get; set; }

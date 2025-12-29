@@ -1,15 +1,12 @@
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
 public class ConsumableItemPrice
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
     public required string Id { get; set; }
     public required string ItemCode { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
     public required string UpdatedBy { get; set; }
@@ -17,7 +14,7 @@ public class ConsumableItemPrice
 
     public void UpdatePrice(decimal newPrice, string updatedBy, DateTime dateUtc)
     {
-        if (newPrice <= 0)
+        if (newPrice < 0)
             throw new ArgumentException("Price must be greater than zero", nameof(newPrice));
 
         History.Add(

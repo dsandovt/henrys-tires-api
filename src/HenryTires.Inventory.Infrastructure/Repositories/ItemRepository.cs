@@ -1,26 +1,30 @@
 using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
 using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Infrastructure.Repositories;
 
-public class ItemRepository : CrudRepository<Item>, IItemRepository
+public class ItemRepository : CrudRepository<ItemDocument>, IItemRepository
 {
     public ItemRepository(IMongoClient client)
         : base(client, "Inventory", "Item")
     {
-        var indexKeys = Builders<Item>.IndexKeys.Ascending(i => i.ItemCode);
+        var indexKeys = Builders<ItemDocument>.IndexKeys.Ascending(i => i.ItemCode);
         var indexOptions = new CreateIndexOptions { Unique = true };
-        var indexModel = new CreateIndexModel<Item>(indexKeys, indexOptions);
+        var indexModel = new CreateIndexModel<ItemDocument>(indexKeys, indexOptions);
         _collection.Indexes.CreateOneAsync(indexModel);
     }
 
     public async Task<Item?> GetByItemCodeAsync(string itemCode)
     {
-        return await _collection
+        var document = await _collection
             .Find(i => i.ItemCode == itemCode && !i.IsDeleted)
             .FirstOrDefaultAsync();
+
+        return document == null ? null : ItemDocumentMapper.ToEntity(document);
     }
 
     public async Task<IEnumerable<Item>> SearchAsync(
@@ -30,63 +34,65 @@ public class ItemRepository : CrudRepository<Item>, IItemRepository
         int pageSize
     )
     {
-        var filter = Builders<Item>.Filter.Eq(i => i.IsDeleted, false);
+        var filter = Builders<ItemDocument>.Filter.Eq(i => i.IsDeleted, false);
 
         if (classification.HasValue)
         {
-            filter = Builders<Item>.Filter.And(
+            filter = Builders<ItemDocument>.Filter.And(
                 filter,
-                Builders<Item>.Filter.Eq(i => i.Classification, classification.Value)
+                Builders<ItemDocument>.Filter.Eq(i => i.Classification, classification.Value)
             );
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var searchFilter = Builders<Item>.Filter.Or(
-                Builders<Item>.Filter.Regex(
+            var searchFilter = Builders<ItemDocument>.Filter.Or(
+                Builders<ItemDocument>.Filter.Regex(
                     i => i.ItemCode,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 ),
-                Builders<Item>.Filter.Regex(
+                Builders<ItemDocument>.Filter.Regex(
                     i => i.Description,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 )
             );
-            filter = Builders<Item>.Filter.And(filter, searchFilter);
+            filter = Builders<ItemDocument>.Filter.And(filter, searchFilter);
         }
 
-        return await _collection
+        var documents = await _collection
             .Find(filter)
             .Skip((page - 1) * pageSize)
             .Limit(pageSize)
             .ToListAsync();
+
+        return documents.Select(ItemDocumentMapper.ToEntity);
     }
 
     public async Task<int> CountAsync(string? search, Classification? classification)
     {
-        var filter = Builders<Item>.Filter.Eq(i => i.IsDeleted, false);
+        var filter = Builders<ItemDocument>.Filter.Eq(i => i.IsDeleted, false);
 
         if (classification.HasValue)
         {
-            filter = Builders<Item>.Filter.And(
+            filter = Builders<ItemDocument>.Filter.And(
                 filter,
-                Builders<Item>.Filter.Eq(i => i.Classification, classification.Value)
+                Builders<ItemDocument>.Filter.Eq(i => i.Classification, classification.Value)
             );
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var searchFilter = Builders<Item>.Filter.Or(
-                Builders<Item>.Filter.Regex(
+            var searchFilter = Builders<ItemDocument>.Filter.Or(
+                Builders<ItemDocument>.Filter.Regex(
                     i => i.ItemCode,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 ),
-                Builders<Item>.Filter.Regex(
+                Builders<ItemDocument>.Filter.Regex(
                     i => i.Description,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 )
             );
-            filter = Builders<Item>.Filter.And(filter, searchFilter);
+            filter = Builders<ItemDocument>.Filter.And(filter, searchFilter);
         }
 
         return (int)await _collection.CountDocumentsAsync(filter);
@@ -94,32 +100,37 @@ public class ItemRepository : CrudRepository<Item>, IItemRepository
 
     public new async Task<Item?> GetByIdAsync(string id)
     {
-        return await _collection.Find(i => i.Id == id && !i.IsDeleted).FirstOrDefaultAsync();
+        var document = await _collection.Find(i => i.Id == id && !i.IsDeleted).FirstOrDefaultAsync();
+        return document == null ? null : ItemDocumentMapper.ToEntity(document);
     }
 
     public async Task<IEnumerable<Item>> GetAllAsync(Classification? classification = null)
     {
-        var filter = Builders<Item>.Filter.Eq(i => i.IsDeleted, false);
+        var filter = Builders<ItemDocument>.Filter.Eq(i => i.IsDeleted, false);
 
         if (classification.HasValue)
         {
-            filter = Builders<Item>.Filter.And(
+            filter = Builders<ItemDocument>.Filter.And(
                 filter,
-                Builders<Item>.Filter.Eq(i => i.Classification, classification.Value)
+                Builders<ItemDocument>.Filter.Eq(i => i.Classification, classification.Value)
             );
         }
 
-        return await _collection.Find(filter).ToListAsync();
+        var documents = await _collection.Find(filter).ToListAsync();
+        return documents.Select(ItemDocumentMapper.ToEntity);
     }
 
     public async Task<Item> CreateAsync(Item item)
     {
-        return await UpsertAsync(null, item);
+        var document = ItemDocumentMapper.ToDocument(item);
+        var result = await UpsertAsync(null, document);
+        return ItemDocumentMapper.ToEntity(result);
     }
 
     public async Task UpdateAsync(Item item)
     {
-        await UpsertAsync(item.Id, item);
+        var document = ItemDocumentMapper.ToDocument(item);
+        await UpsertAsync(item.Id, document);
     }
 
     public async Task DeleteAsync(string id, string deletedBy, DateTime deletedAtUtc)
@@ -130,7 +141,7 @@ public class ItemRepository : CrudRepository<Item>, IItemRepository
             item.IsDeleted = true;
             item.DeletedBy = deletedBy;
             item.DeletedAtUtc = deletedAtUtc;
-            await UpsertAsync(item.Id, item);
+            await UpdateAsync(item);
         }
     }
 }

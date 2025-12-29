@@ -1,6 +1,11 @@
+using HenryTires.Inventory.Application.Common;
+using HenryTires.Inventory.Application.Extensions;
 using HenryTires.Inventory.Application.Ports;
-using HenryTires.Inventory.Application.UseCases.Inventory;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Services;
+using HenryTires.Inventory.Infrastructure.Adapters.Identity;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Repositories;
+using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using HenryTires.Inventory.Infrastructure.Data;
 using HenryTires.Inventory.Infrastructure.Repositories;
 using HenryTires.Inventory.Infrastructure.Services;
@@ -28,7 +33,7 @@ public static class ServiceCollectionExtensions
 
         // Configure MongoDB client with SSL settings to fix Linux/Railway SSL issues
         var settings = MongoClientSettings.FromConnectionString(connectionString);
-        settings.SslSettings = new MongoDB.Driver.SslSettings
+        settings.SslSettings = new SslSettings
         {
             EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
             CheckCertificateRevocation = false
@@ -58,18 +63,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<ICurrentUser, CurrentUserService>();
-        services.AddSingleton<IMongoUnitOfWork, MongoUnitOfWork>();
-        services.AddSingleton<HenryTires.Inventory.Application.Common.ITimezoneConverter, TimezoneConverter>();
+
+        // Transaction and identity adapters
+        services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
+        services.AddSingleton<IIdentityGenerator, MongoIdentityGenerator>();
+        services.AddSingleton<ISequenceGenerator, MongoSequenceGenerator>();
+
+        services.AddSingleton<ITimezoneConverter, TimezoneConverter>();
 
         // Domain Services
         services.AddSingleton<StockAvailabilityService>();
         services.AddSingleton<PriceResolutionService>();
 
-        // Application Services (new clean architecture)
-        services.AddScoped<NewTransactionService>();
-        services.AddScoped<ItemManagementService>();
-        services.AddScoped<PriceManagementService>();
-        services.AddScoped<HenryTires.Inventory.Application.UseCases.Sales.SaleService>();
+        // Application Services (registered in Application layer)
+        services.AddApplicationServices();
 
         return services;
     }

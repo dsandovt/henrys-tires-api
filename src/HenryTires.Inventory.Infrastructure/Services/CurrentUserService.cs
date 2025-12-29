@@ -2,21 +2,22 @@ using System.Security.Claims;
 using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace HenryTires.Inventory.Infrastructure.Services;
 
 public class CurrentUserService : ICurrentUser
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IBranchRepository _branchRepository;
+    private readonly ILogger<CurrentUserService> _logger;
 
     public CurrentUserService(
         IHttpContextAccessor httpContextAccessor,
-        IBranchRepository branchRepository
+        ILogger<CurrentUserService> logger
     )
     {
         _httpContextAccessor = httpContextAccessor;
-        _branchRepository = branchRepository;
+        _logger = logger;
     }
 
     public string UserId
@@ -67,47 +68,21 @@ public class CurrentUserService : ICurrentUser
     {
         get
         {
-            if (BranchId == null)
-            {
-                Console.WriteLine("BranchCode: BranchId is null");
-                return null;
-            }
+            // BranchCode is stored in JWT claims by JwtTokenService
+            var claim = _httpContextAccessor.HttpContext?.User?.FindFirst("branchCode");
+            var branchCode = claim?.Value;
 
-            try
+            if (branchCode == null && BranchId != null)
             {
-                Console.WriteLine(
-                    $"BranchCode: Looking up branch for BranchId: '{BranchId}' (Length: {BranchId.Length})"
+                _logger.LogWarning(
+                    "BranchCode claim not found for user {UserId} with BranchId {BranchId}. "
+                        + "This may indicate an old JWT token. User should re-login.",
+                    UserId,
+                    BranchId
                 );
-
-                // Look up branch by ID to get Code
-                var branch = _branchRepository.GetByIdAsync(BranchId).GetAwaiter().GetResult();
-
-                if (branch == null)
-                {
-                    // Log warning but don't throw - let calling code handle missing branch
-                    Console.WriteLine($"Warning: Branch not found for BranchId: {BranchId}");
-
-                    // Try to get all branches to debug
-                    var allBranches = _branchRepository.GetAllAsync().GetAwaiter().GetResult();
-                    Console.WriteLine(
-                        $"Available branches: {string.Join(", ", allBranches.Select(b => $"{b.Id} ({b.Code})"))}"
-                    );
-
-                    return null;
-                }
-
-                Console.WriteLine(
-                    $"BranchCode: Found branch {branch.Code} for BranchId {BranchId}"
-                );
-                return branch.Code;
             }
-            catch (Exception ex)
-            {
-                // Log error but don't throw - let calling code handle missing branch
-                Console.WriteLine($"Error looking up branch for BranchId {BranchId}: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                return null;
-            }
+
+            return branchCode;
         }
     }
 }

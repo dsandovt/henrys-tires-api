@@ -1,43 +1,52 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
+using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
+using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Infrastructure.Repositories;
 
-public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInventorySummaryRepository
+public class InventorySummaryRepository : CrudRepository<InventorySummaryDocument>, IInventorySummaryRepository
 {
     public InventorySummaryRepository(IMongoClient client)
         : base(client, "Inventory", "InventorySummary")
     {
-        var indexKeys = Builders<InventorySummary>
+        var indexKeys = Builders<InventorySummaryDocument>
             .IndexKeys.Ascending(s => s.BranchCode)
             .Ascending(s => s.ItemCode);
         var indexOptions = new CreateIndexOptions { Unique = true };
-        var indexModel = new CreateIndexModel<InventorySummary>(indexKeys, indexOptions);
+        var indexModel = new CreateIndexModel<InventorySummaryDocument>(indexKeys, indexOptions);
         _collection.Indexes.CreateOneAsync(indexModel);
 
-        var branchIndexKeys = Builders<InventorySummary>.IndexKeys.Ascending(s => s.BranchCode);
-        var branchIndexModel = new CreateIndexModel<InventorySummary>(branchIndexKeys);
+        var branchIndexKeys = Builders<InventorySummaryDocument>.IndexKeys.Ascending(s => s.BranchCode);
+        var branchIndexModel = new CreateIndexModel<InventorySummaryDocument>(branchIndexKeys);
         _collection.Indexes.CreateOneAsync(branchIndexModel);
     }
 
     public async Task<InventorySummary?> GetByKeyAsync(
         string branchCode,
         string itemCode,
-        IClientSessionHandle? session = null
+        ITransactionScope? transactionScope = null
     )
     {
-        var filter = Builders<InventorySummary>.Filter.And(
-            Builders<InventorySummary>.Filter.Eq(s => s.BranchCode, branchCode),
-            Builders<InventorySummary>.Filter.Eq(s => s.ItemCode, itemCode)
+        var session = transactionScope.ToMongoSession();
+
+        var filter = Builders<InventorySummaryDocument>.Filter.And(
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode),
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.ItemCode, itemCode)
         );
 
+        InventorySummaryDocument? document;
         if (session != null)
-            return await _collection.Find(session, filter).FirstOrDefaultAsync();
+            document = await _collection.Find(session, filter).FirstOrDefaultAsync();
         else
-            return await _collection.Find(filter).FirstOrDefaultAsync();
+            document = await _collection.Find(filter).FirstOrDefaultAsync();
+
+        return document == null ? null : InventorySummaryDocumentMapper.ToEntity(document);
     }
 
     public async Task<IEnumerable<InventorySummary>> GetByBranchAsync(
@@ -48,17 +57,17 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
         int pageSize
     )
     {
-        var filters = new List<FilterDefinition<InventorySummary>>();
+        var filters = new List<FilterDefinition<InventorySummaryDocument>>();
 
         if (!string.IsNullOrWhiteSpace(branchCode))
         {
-            filters.Add(Builders<InventorySummary>.Filter.Eq(s => s.BranchCode, branchCode));
+            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             filters.Add(
-                Builders<InventorySummary>.Filter.Regex(
+                Builders<InventorySummaryDocument>.Filter.Regex(
                     s => s.ItemCode,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 )
@@ -68,7 +77,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
         if (condition.HasValue)
         {
             filters.Add(
-                Builders<InventorySummary>.Filter.ElemMatch(
+                Builders<InventorySummaryDocument>.Filter.ElemMatch(
                     s => s.Entries,
                     e => e.Condition == condition.Value
                 )
@@ -77,14 +86,16 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
 
         var filter =
             filters.Count > 0
-                ? Builders<InventorySummary>.Filter.And(filters)
-                : Builders<InventorySummary>.Filter.Empty;
+                ? Builders<InventorySummaryDocument>.Filter.And(filters)
+                : Builders<InventorySummaryDocument>.Filter.Empty;
 
-        return await _collection
+        var documents = await _collection
             .Find(filter)
             .Skip((page - 1) * pageSize)
             .Limit(pageSize)
             .ToListAsync();
+
+        return documents.Select(InventorySummaryDocumentMapper.ToEntity);
     }
 
     public async Task<long> CountByBranchAsync(
@@ -93,17 +104,17 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
         ItemCondition? condition
     )
     {
-        var filters = new List<FilterDefinition<InventorySummary>>();
+        var filters = new List<FilterDefinition<InventorySummaryDocument>>();
 
         if (!string.IsNullOrWhiteSpace(branchCode))
         {
-            filters.Add(Builders<InventorySummary>.Filter.Eq(s => s.BranchCode, branchCode));
+            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             filters.Add(
-                Builders<InventorySummary>.Filter.Regex(
+                Builders<InventorySummaryDocument>.Filter.Regex(
                     s => s.ItemCode,
                     new MongoDB.Bson.BsonRegularExpression(search, "i")
                 )
@@ -113,7 +124,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
         if (condition.HasValue)
         {
             filters.Add(
-                Builders<InventorySummary>.Filter.ElemMatch(
+                Builders<InventorySummaryDocument>.Filter.ElemMatch(
                     s => s.Entries,
                     e => e.Condition == condition.Value
                 )
@@ -122,38 +133,46 @@ public class InventorySummaryRepository : CrudRepository<InventorySummary>, IInv
 
         var filter =
             filters.Count > 0
-                ? Builders<InventorySummary>.Filter.And(filters)
-                : Builders<InventorySummary>.Filter.Empty;
+                ? Builders<InventorySummaryDocument>.Filter.And(filters)
+                : Builders<InventorySummaryDocument>.Filter.Empty;
 
         return await _collection.CountDocumentsAsync(filter);
     }
 
     public async Task<int> GetTotalQuantityByBranchAsync(string branchCode)
     {
-        var summaries = await _collection.Find(s => s.BranchCode == branchCode).ToListAsync();
-        return summaries.Sum(s => s.OnHandTotal);
+        var documents = await _collection.Find(s => s.BranchCode == branchCode).ToListAsync();
+        return documents.Sum(s => s.OnHandTotal);
     }
 
-    public async Task UpsertAsync(InventorySummary summary, IClientSessionHandle? session = null)
+    public async Task UpsertAsync(InventorySummary summary, ITransactionScope? transactionScope = null)
     {
-        await base.UpsertAsync(summary.Id, summary, session);
+        var document = InventorySummaryDocumentMapper.ToDocument(summary);
+        var session = transactionScope.ToMongoSession();
+        await base.UpsertAsync(summary.Id, document, session);
     }
 
     public async Task UpsertWithVersionCheckAsync(
         InventorySummary summary,
-        IClientSessionHandle session
+        ITransactionScope transactionScope
     )
     {
-        var filter = Builders<InventorySummary>.Filter.And(
-            Builders<InventorySummary>.Filter.Eq(s => s.BranchCode, summary.BranchCode),
-            Builders<InventorySummary>.Filter.Eq(s => s.ItemCode, summary.ItemCode),
-            Builders<InventorySummary>.Filter.Eq(s => s.Version, summary.Version - 1) // Check previous version
+        var document = InventorySummaryDocumentMapper.ToDocument(summary);
+        var session = transactionScope.ToMongoSession();
+
+        if (session == null)
+            throw new InvalidOperationException("UpsertWithVersionCheckAsync requires a transaction scope.");
+
+        var filter = Builders<InventorySummaryDocument>.Filter.And(
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, summary.BranchCode),
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.ItemCode, summary.ItemCode),
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.Version, summary.Version - 1) // Check previous version
         );
 
         var result = await _collection.ReplaceOneAsync(
             session,
             filter,
-            summary,
+            document,
             new ReplaceOptions { IsUpsert = true }
         );
 

@@ -37,6 +37,7 @@ public class ExceptionHandlingMiddleware
             NotFoundException => (HttpStatusCode.NotFound, exception.Message),
             ValidationException => (HttpStatusCode.BadRequest, exception.Message),
             UnauthorizedException => (HttpStatusCode.Unauthorized, exception.Message),
+            ConflictException => (HttpStatusCode.Conflict, exception.Message),
             BusinessException => (HttpStatusCode.Conflict, exception.Message),
             _ => (HttpStatusCode.InternalServerError, "An internal server error occurred")
         };

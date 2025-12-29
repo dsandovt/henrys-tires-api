@@ -1,19 +1,13 @@
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Application.Ports;
 
-/// <summary>
-/// Inventory transaction repository interface. Implementation inherits from CrudRepository.
-/// This interface defines transaction-specific queries and commands.
-/// </summary>
 public interface IInventoryTransactionRepository
 {
-    // Basic CRUD operations (implemented by CrudRepository)
     Task<InventoryTransaction?> GetByIdAsync(string id);
 
-    // Custom query methods
     Task<InventoryTransaction?> GetByTransactionNumberAsync(string transactionNumber);
     Task<IEnumerable<InventoryTransaction>> SearchAsync(
         string? branchCode,
@@ -24,7 +18,8 @@ public interface IInventoryTransactionRepository
         string? itemCode,
         ItemCondition? condition,
         int page,
-        int pageSize);
+        int pageSize
+    );
     Task<long> CountAsync(
         string? branchCode,
         DateTime? from,
@@ -32,9 +27,10 @@ public interface IInventoryTransactionRepository
         TransactionType? type,
         TransactionStatus? status,
         string? itemCode,
-        ItemCondition? condition);
+        ItemCondition? condition
+    );
 
     // Custom command methods
     Task<InventoryTransaction> CreateAsync(InventoryTransaction transaction);
-    Task UpdateAsync(InventoryTransaction transaction, IClientSessionHandle? session = null);
+    Task UpdateAsync(InventoryTransaction transaction, ITransactionScope? transactionScope = null);
 }

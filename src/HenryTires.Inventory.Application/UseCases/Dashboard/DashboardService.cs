@@ -1,11 +1,12 @@
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Application.UseCases.Dashboard;
 
-public class DashboardService
+public class DashboardService : IDashboardService
 {
     private readonly IInventoryTransactionRepository _transactionRepository;
     private readonly ISaleRepository _saleRepository;
@@ -34,16 +35,13 @@ public class DashboardService
         string? branchCode = null
     )
     {
-        // Validate date range
         if (endDateUtc < startDateUtc)
         {
             throw new ArgumentException("End date must be after start date");
         }
 
-        // Validate branch access
         var validatedBranchCode = ValidateBranchAccessForQuery(branchCode);
 
-        // Get transactions using SearchAsync with pagination (get a large batch)
         var transactions = await _transactionRepository.SearchAsync(
             branchCode: validatedBranchCode,
             from: startDateUtc,
@@ -58,7 +56,6 @@ public class DashboardService
 
         var filteredTransactions = transactions.ToList();
 
-        // Convert branchCode to branchId for Sales query
         string? branchId = null;
         if (!string.IsNullOrEmpty(validatedBranchCode))
         {
@@ -66,7 +63,6 @@ public class DashboardService
             branchId = branch?.Id;
         }
 
-        // Get committed sales (includes both goods and services)
         var sales = await _saleRepository.SearchAsync(
             branchId: branchId,
             from: startDateUtc,
@@ -77,11 +73,9 @@ public class DashboardService
 
         var committedSales = sales.Where(s => s.Status == TransactionStatus.Committed).ToList();
 
-        // Get today's date range
         var todayStart = _clock.UtcNow.Date;
         var todayEnd = todayStart.AddDays(1).AddTicks(-1);
 
-        // Calculate summary metrics (including sales)
         var summary = await CalculateSummaryAsync(
             filteredTransactions,
             committedSales,
@@ -91,13 +85,11 @@ public class DashboardService
         summary.StartDate = startDateUtc;
         summary.EndDate = endDateUtc;
 
-        // Calculate branch breakdown (including sales)
         var branchBreakdown = await CalculateBranchBreakdownAsync(
             filteredTransactions,
             committedSales
         );
 
-        // Get recent activity (last 10 transactions + sales)
         var recentActivity = await GetRecentActivityAsync(filteredTransactions, committedSales);
 
         return new DashboardDataDto
@@ -119,11 +111,10 @@ public class DashboardService
         var inTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
 
         var salesTotal =
-            sales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-            + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-        var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
+            sales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+            + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+        var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
-        // Calculate today's totals
         var todaySales = sales
             .Where(s => s.SaleDateUtc >= todayStart && s.SaleDateUtc <= todayEnd)
             .ToList();
@@ -141,15 +132,14 @@ public class DashboardService
             .ToList();
 
         var salesToday =
-            todaySales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-            + todayOutTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-        var purchasesToday = todayPurchases.Sum(t => t.Lines.Sum(l => l.LineTotal));
+            todaySales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+            + todayOutTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+        var purchasesToday = todayPurchases.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
-        // Determine currency (use USD as default if mixed or no transactions)
         var currency =
             sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
             ?? transactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-            ?? "USD";
+            ?? Currency.USD;
 
         return Task.FromResult(
             new DashboardSummaryDto
@@ -163,8 +153,8 @@ public class DashboardService
                 SalesTransactions = sales.Count + outTransactions.Count,
                 PurchaseTransactions = inTransactions.Count,
                 Currency = currency,
-                StartDate = DateTime.UtcNow, // Will be set by caller
-                EndDate = DateTime.UtcNow, // Will be set by caller
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow,
             }
         );
     }
@@ -177,11 +167,9 @@ public class DashboardService
         var allBranches = await _branchRepository.GetAllAsync();
         var branchMap = allBranches.ToDictionary(b => b.Code, b => b.Name);
 
-        // Group sales by branch
         var salesByBranch = sales.GroupBy(s => s.BranchId);
         var transactionsByBranch = transactions.GroupBy(t => t.BranchCode);
 
-        // Get all unique branch IDs from both sales and transactions
         var allBranchIds = salesByBranch
             .Select(g => g.Key)
             .Union(transactionsByBranch.Select(g => g.Key))
@@ -206,14 +194,14 @@ public class DashboardService
                 .ToList();
 
             var salesTotal =
-                branchSales.Sum(s => s.Lines.Sum(l => l.LineTotal))
-                + outTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
-            var purchasesTotal = inTransactions.Sum(t => t.Lines.Sum(l => l.LineTotal));
+                branchSales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
+                + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+            var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
 
             var currency =
                 branchSales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
                 ?? branchTransactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-                ?? "USD";
+                ?? Currency.USD;
 
             breakdown.Add(
                 new BranchBreakdownDto
@@ -243,11 +231,16 @@ public class DashboardService
 
         var activity = new List<RecentActivityItemDto>();
 
-        // Add sales to activity
+        // Pre-compile lambda to avoid repeated compilation
+        static decimal CalculateLineTotal(IEnumerable<SaleLine> lines) =>
+            lines.Sum(l => l.LineTotal);
+        static decimal CalculateTransactionLineTotal(IEnumerable<InventoryTransactionLine> lines) =>
+            lines.Sum(l => l.LineTotal);
+
         foreach (var sale in sales)
         {
-            var amount = sale.Lines.Sum(l => l.LineTotal);
-            var currency = sale.Lines.FirstOrDefault()?.Currency ?? "USD";
+            var amount = CalculateLineTotal(sale.Lines);
+            var currency = sale.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto
@@ -266,13 +259,12 @@ public class DashboardService
             );
         }
 
-        // Add purchase transactions to activity
         var purchaseTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
 
         foreach (var tx in purchaseTransactions)
         {
-            var amount = tx.Lines.Sum(l => l.LineTotal);
-            var currency = tx.Lines.FirstOrDefault()?.Currency ?? "USD";
+            var amount = CalculateTransactionLineTotal(tx.Lines);
+            var currency = tx.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto
@@ -291,7 +283,6 @@ public class DashboardService
             );
         }
 
-        // Sort by date and take top 10
         return activity.OrderByDescending(a => a.TransactionDateUtc).Take(10).ToList();
     }
 

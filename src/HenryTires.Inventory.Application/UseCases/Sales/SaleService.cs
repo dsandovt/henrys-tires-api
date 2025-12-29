@@ -1,95 +1,100 @@
 using HenryTires.Inventory.Application.Common;
+using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Inbound;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Sales;
 
-/// <summary>
-/// Service for managing Sales with clean Goods vs Services separation.
-///
-/// CORE RULES:
-/// - Sale can contain BOTH Goods and Services
-/// - Only Goods generate InventoryTransaction (OUT)
-/// - Services are revenue-only, no inventory impact
-/// - ONE Sale may generate ONE InventoryTransaction with ONLY goods lines
-/// </summary>
-public class SaleService
+public class SaleService : ISaleService
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IItemRepository _itemRepository;
     private readonly IInventoryTransactionRepository _transactionRepository;
     private readonly IInventorySummaryRepository _summaryRepository;
+    private readonly IBranchRepository _branchRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
-    private readonly IMongoUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IIdentityGenerator _identityGenerator;
+    private readonly ISequenceGenerator _sequenceGenerator;
 
     public SaleService(
         ISaleRepository saleRepository,
         IItemRepository itemRepository,
         IInventoryTransactionRepository transactionRepository,
         IInventorySummaryRepository summaryRepository,
+        IBranchRepository branchRepository,
         ICurrentUser currentUser,
         IClock clock,
-        IMongoUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IIdentityGenerator identityGenerator,
+        ISequenceGenerator sequenceGenerator
+    )
     {
         _saleRepository = saleRepository;
         _itemRepository = itemRepository;
         _transactionRepository = transactionRepository;
         _summaryRepository = summaryRepository;
+        _branchRepository = branchRepository;
         _currentUser = currentUser;
         _clock = clock;
         _unitOfWork = unitOfWork;
+        _identityGenerator = identityGenerator;
+        _sequenceGenerator = sequenceGenerator;
     }
 
-    /// <summary>
-    /// Create a new Sale (Draft status).
-    /// Validates items and stock availability for Goods.
-    /// Does NOT post to inventory yet.
-    /// </summary>
-    public async Task<Sale> CreateSaleAsync(
-        string? branchId,
-        DateTime saleDateUtc,
-        List<SaleLine> lines,
-        string? customerName,
-        string? customerPhone,
-        string? notes)
+    public async Task<Sale> CreateSaleAsync(CreateSaleRequest request)
     {
-        // Validate branch access
-        var validBranchId = _currentUser.BranchId
-            ?? branchId
-            ?? throw new ValidationException("Branch is required");
+        // Get branch to construct sale number
+        var branch = await ValidateBranchAccessAsync(request.BranchId);
 
-        // Validate all items exist and enrich lines
+        var lines = request
+            .Lines.Select(l => new SaleLine
+            {
+                LineId = _identityGenerator.GenerateId(),
+                ItemId = l.ItemId,
+                ItemCode = l.ItemCode,
+                Description = l.Description,
+                Classification = l.Classification,
+                Condition = l.Condition,
+                Quantity = l.Quantity,
+                UnitPrice = l.UnitPrice,
+                Currency = l.Currency,
+                IsTaxable = l.IsTaxable,
+                AppliesShopFee = l.AppliesShopFee,
+            })
+            .ToList();
+
         foreach (var line in lines)
         {
-            var item = await _itemRepository.GetByIdAsync(line.ItemId)
+            var item =
+                await _itemRepository.GetByIdAsync(line.ItemId)
                 ?? throw new NotFoundException($"Item {line.ItemId} not found");
 
             if (item.IsDeleted)
                 throw new ValidationException($"Item {item.ItemCode} is deleted");
 
-            // Ensure line has correct classification from item
             if (line.Classification != item.Classification)
-                throw new ValidationException($"Line classification mismatch for item {item.ItemCode}");
+                throw new ValidationException(
+                    $"Line classification mismatch for item {item.ItemCode}"
+                );
 
-            // Validate Condition is set for Goods
             if (item.Classification == Classification.Good && !line.Condition.HasValue)
                 throw new ValidationException($"Condition is required for Good: {item.ItemCode}");
 
-            // Validate Condition is NOT set for Services
             if (item.Classification == Classification.Service && line.Condition.HasValue)
-                throw new ValidationException($"Condition must not be set for Service: {item.ItemCode}");
+                throw new ValidationException(
+                    $"Condition must not be set for Service: {item.ItemCode}"
+                );
         }
 
-        // Check stock availability for Goods ONLY
         var goodsLines = lines.Where(l => l.Classification == Classification.Good).ToList();
         foreach (var line in goodsLines)
         {
-            var summary = await _summaryRepository.GetByKeyAsync(
-                _currentUser.BranchCode!,
-                line.ItemCode);
+            var summary = await _summaryRepository.GetByKeyAsync(branch.Code, line.ItemCode);
 
             if (summary == null)
                 throw new BusinessException($"No stock found for {line.ItemCode} in this branch");
@@ -99,88 +104,91 @@ public class SaleService
             {
                 var available = entry?.OnHand ?? 0;
                 throw new BusinessException(
-                    $"Insufficient stock for {line.ItemCode} ({line.Condition}). " +
-                    $"Available: {available}, Requested: {line.Quantity}");
+                    $"Insufficient stock for {line.ItemCode} ({line.Condition}). "
+                        + $"Available: {available}, Requested: {line.Quantity}"
+                );
             }
         }
 
-        // Generate Sale Number
-        var saleNumber = $"SALE-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString()[..8].ToUpper()}";
+        // Generate sequential sale number per branch: BRANCHCODE-0000001
+        var sequenceName = $"sale-{branch.Code}";
+        var sequence = await _sequenceGenerator.GetNextSequenceAsync(sequenceName);
+        var saleNumber = $"{branch.Code}-{sequence:D7}"; // e.g., WARWICK-0025000
 
         var sale = new Sale
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             SaleNumber = saleNumber,
-            BranchId = validBranchId,
-            SaleDateUtc = saleDateUtc,
+            BranchId = branch.Id,
+            SaleDateUtc = request.SaleDateUtc,
             Lines = lines,
-            CustomerName = customerName,
-            CustomerPhone = customerPhone,
-            Notes = notes,
+            CustomerName = request.CustomerName,
+            CustomerPhone = request.CustomerPhone,
+            Notes = request.Notes,
+            PaymentMethod = request.PaymentMethod,
             Status = TransactionStatus.Draft,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
             ModifiedAtUtc = _clock.UtcNow,
-            ModifiedBy = _currentUser.Username
+            ModifiedBy = _currentUser.Username,
         };
 
         await _saleRepository.CreateAsync(sale);
         return sale;
     }
 
-    /// <summary>
-    /// Post Sale to inventory.
-    /// - Generates InventoryTransaction (OUT) for Goods ONLY
-    /// - Services are ignored (revenue only)
-    /// - Uses MongoDB transaction for atomicity
-    /// </summary>
     public async Task<Sale> PostSaleAsync(string saleId)
     {
-        using var session = await _unitOfWork.StartSessionAsync();
+        using var scope = await _unitOfWork.BeginTransactionAsync();
 
         try
         {
-            session.StartTransaction();
-
-            var sale = await _saleRepository.GetByIdAsync(saleId)
+            var sale =
+                await _saleRepository.GetByIdAsync(saleId)
                 ?? throw new NotFoundException($"Sale {saleId} not found");
 
             if (sale.Status != TransactionStatus.Draft)
                 throw new BusinessException($"Sale {sale.SaleNumber} is already {sale.Status}");
 
-            // Filter ONLY Goods for inventory transaction
-            var goodsLines = sale.Lines
-                .Where(l => l.Classification == Classification.Good)
+            // Get branch for the sale to use correct branch code
+            var branch =
+                await _branchRepository.GetByIdAsync(sale.BranchId)
+                ?? throw new NotFoundException($"Branch {sale.BranchId} not found");
+
+            var goodsLines = sale
+                .Lines.Where(l => l.Classification == Classification.Good)
                 .ToList();
 
             string? inventoryTransactionId = null;
 
-            // Create InventoryTransaction ONLY if there are Goods
             if (goodsLines.Any())
             {
-                var transactionNumber = $"OUT-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString()[..8].ToUpper()}";
+                var transactionNumber =
+                    $"OUT-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId()[..8].ToUpper()}";
 
-                var inventoryLines = goodsLines.Select(line => new InventoryTransactionLine
-                {
-                    LineId = ObjectId.GenerateNewId().ToString(),
-                    ItemId = line.ItemId,
-                    ItemCode = line.ItemCode,
-                    Condition = line.Condition!.Value, // Safe because validated earlier
-                    Quantity = line.Quantity,
-                    UnitPrice = line.UnitPrice,
-                    Currency = line.Currency,
-                    PriceSource = PriceSource.Sale,
-                    PriceSetByRole = _currentUser.Role.ToString(),
-                    PriceSetByUser = _currentUser.Username,
-                    LineTotal = line.LineTotal,
-                    ExecutedAtUtc = _clock.UtcNow
-                }).ToList();
+                var inventoryLines = goodsLines
+                    .Select(line => new InventoryTransactionLine
+                    {
+                        LineId = _identityGenerator.GenerateId(),
+                        ItemId = line.ItemId,
+                        ItemCode = line.ItemCode,
+                        Condition = line.Condition!.Value, // Safe because validated earlier
+                        Quantity = line.Quantity,
+                        UnitPrice = line.UnitPrice,
+                        Currency = line.Currency,
+                        PriceSource = PriceSource.Sale,
+                        PriceSetByRole = _currentUser.Role.ToString(),
+                        PriceSetByUser = _currentUser.Username,
+                        LineTotal = line.LineTotal,
+                        ExecutedAtUtc = _clock.UtcNow,
+                    })
+                    .ToList();
 
                 var inventoryTransaction = new InventoryTransaction
                 {
-                    Id = ObjectId.GenerateNewId().ToString(),
+                    Id = _identityGenerator.GenerateId(),
                     TransactionNumber = transactionNumber,
-                    BranchCode = _currentUser.BranchCode!,
+                    BranchCode = branch.Code,
                     Type = TransactionType.Out,
                     Status = TransactionStatus.Draft,
                     TransactionDateUtc = sale.SaleDateUtc,
@@ -189,25 +197,21 @@ public class SaleService
                     CreatedAtUtc = _clock.UtcNow,
                     CreatedBy = _currentUser.Username,
                     ModifiedAtUtc = _clock.UtcNow,
-                    ModifiedBy = _currentUser.Username
+                    ModifiedBy = _currentUser.Username,
                 };
 
-                // Create and commit inventory transaction
                 await _transactionRepository.CreateAsync(inventoryTransaction);
 
-                // Commit inventory (update summaries)
-                await CommitInventoryTransactionAsync(inventoryTransaction, session);
+                await CommitInventoryTransactionAsync(inventoryTransaction, scope);
 
                 inventoryTransactionId = inventoryTransaction.Id;
 
-                // Link inventory transaction to goods lines
                 foreach (var goodLine in goodsLines)
                 {
                     goodLine.InventoryTransactionId = inventoryTransactionId;
                 }
             }
 
-            // Update Sale status
             sale.Status = TransactionStatus.Committed;
             sale.PostedAtUtc = _clock.UtcNow;
             sale.PostedBy = _currentUser.Username;
@@ -216,39 +220,36 @@ public class SaleService
 
             await _saleRepository.UpdateAsync(sale);
 
-            await session.CommitTransactionAsync();
+            await scope.CommitAsync();
             return sale;
         }
         catch
         {
-            await session.AbortTransactionAsync();
+            await scope.RollbackAsync();
             throw;
         }
     }
 
-    /// <summary>
-    /// Commit InventoryTransaction by updating inventory summaries.
-    /// This is the same logic from NewTransactionService but isolated here.
-    /// </summary>
     private async Task CommitInventoryTransactionAsync(
         InventoryTransaction transaction,
-        MongoDB.Driver.IClientSessionHandle session)
+        ITransactionScope scope
+    )
     {
-        // Update inventory summaries
         foreach (var line in transaction.Lines)
         {
             var summary = await _summaryRepository.GetByKeyAsync(
                 transaction.BranchCode,
                 line.ItemCode,
-                session);
+                scope
+            );
 
             if (summary == null)
             {
-                // Create new summary
-                var initialQuantity = transaction.Type == TransactionType.In ? line.Quantity : -line.Quantity;
+                var initialQuantity =
+                    transaction.Type == TransactionType.In ? line.Quantity : -line.Quantity;
                 summary = new InventorySummary
                 {
-                    Id = ObjectId.GenerateNewId().ToString(),
+                    Id = _identityGenerator.GenerateId(),
                     BranchCode = transaction.BranchCode,
                     ItemCode = line.ItemCode,
                     Entries = new List<InventoryEntry>
@@ -258,13 +259,13 @@ public class SaleService
                             Condition = line.Condition,
                             OnHand = initialQuantity,
                             Reserved = 0,
-                            LatestEntryDateUtc = transaction.TransactionDateUtc
-                        }
+                            LatestEntryDateUtc = transaction.TransactionDateUtc,
+                        },
                     },
                     OnHandTotal = initialQuantity,
                     ReservedTotal = 0,
                     Version = 1,
-                    UpdatedAtUtc = _clock.UtcNow
+                    UpdatedAtUtc = _clock.UtcNow,
                 };
             }
             else
@@ -277,12 +278,11 @@ public class SaleService
                         Condition = line.Condition,
                         OnHand = 0,
                         Reserved = 0,
-                        LatestEntryDateUtc = transaction.TransactionDateUtc
+                        LatestEntryDateUtc = transaction.TransactionDateUtc,
                     };
                     summary.Entries.Add(entry);
                 }
 
-                // Update quantity based on transaction type
                 var delta = transaction.Type == TransactionType.In ? line.Quantity : -line.Quantity;
                 entry.OnHand += delta;
                 entry.LatestEntryDateUtc = transaction.TransactionDateUtc;
@@ -291,21 +291,19 @@ public class SaleService
                 summary.UpdatedAtUtc = _clock.UtcNow;
             }
 
-            // Recalculate totals
             summary.OnHandTotal = summary.Entries.Sum(e => e.OnHand);
             summary.ReservedTotal = summary.Entries.Sum(e => e.Reserved);
 
-            await _summaryRepository.UpsertAsync(summary, session);
+            await _summaryRepository.UpsertAsync(summary, scope);
         }
 
-        // Mark transaction as committed
         transaction.Status = TransactionStatus.Committed;
         transaction.CommittedAtUtc = _clock.UtcNow;
         transaction.CommittedBy = _currentUser.Username;
         transaction.ModifiedAtUtc = _clock.UtcNow;
         transaction.ModifiedBy = _currentUser.Username;
 
-        await _transactionRepository.UpdateAsync(transaction, session);
+        await _transactionRepository.UpdateAsync(transaction, scope);
     }
 
     public async Task<Sale?> GetSaleByIdAsync(string saleId)
@@ -313,7 +311,11 @@ public class SaleService
         return await _saleRepository.GetByIdAsync(saleId);
     }
 
-    public async Task<IEnumerable<Sale>> GetSalesByBranchAndDateRangeAsync(string branchId, DateTime from, DateTime to)
+    public async Task<IEnumerable<Sale>> GetSalesByBranchAndDateRangeAsync(
+        string branchId,
+        DateTime from,
+        DateTime to
+    )
     {
         return await _saleRepository.GetByBranchAndDateRangeAsync(branchId, from, to);
     }
@@ -323,7 +325,13 @@ public class SaleService
         return await _saleRepository.GetByDateRangeAsync(from, to);
     }
 
-    public async Task<IEnumerable<Sale>> SearchSalesAsync(string? branchId, DateTime? from, DateTime? to, int page, int pageSize)
+    public async Task<IEnumerable<Sale>> SearchSalesAsync(
+        string? branchId,
+        DateTime? from,
+        DateTime? to,
+        int page,
+        int pageSize
+    )
     {
         return await _saleRepository.SearchAsync(branchId, from, to, page, pageSize);
     }
@@ -331,5 +339,44 @@ public class SaleService
     public async Task<int> CountSalesAsync(string? branchId, DateTime? from, DateTime? to)
     {
         return await _saleRepository.CountAsync(branchId, from, to);
+    }
+
+    private async Task<Branch> ValidateBranchAccessAsync(string? branchId)
+    {
+        if (_currentUser.Role == Role.Admin)
+        {
+            if (string.IsNullOrWhiteSpace(branchId))
+            {
+                throw new ValidationException("BranchId is required for Admin users");
+            }
+
+            var branch =
+                await _branchRepository.GetByIdAsync(branchId)
+                ?? throw new NotFoundException($"Branch {branchId} not found");
+
+            return branch;
+        }
+        else
+        {
+            if (_currentUser.BranchId == null)
+            {
+                throw new UnauthorizedException("User does not have an assigned branch");
+            }
+
+            if (_currentUser.BranchCode == null)
+            {
+                throw new UnauthorizedException(
+                    $"User's assigned branch (ID: {_currentUser.BranchId}) not found in system. Please contact administrator to fix branch data."
+                );
+            }
+
+            var branch =
+                await _branchRepository.GetByIdAsync(_currentUser.BranchId)
+                ?? throw new NotFoundException(
+                    $"Branch {_currentUser.BranchId} not found for user {_currentUser.Username}"
+                );
+
+            return branch;
+        }
     }
 }

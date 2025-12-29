@@ -12,6 +12,7 @@ public class SaleDto
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
+    public required PaymentMethod PaymentMethod { get; set; }
     public required TransactionStatus Status { get; set; }
     public DateTime? PostedAtUtc { get; set; }
     public string? PostedBy { get; set; }
@@ -31,7 +32,9 @@ public class SaleLineDto
     public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
+    public bool IsTaxable { get; set; } = true;
+    public bool AppliesShopFee { get; set; } = true;
     public required decimal LineTotal { get; set; }
     public string? InventoryTransactionId { get; set; } // Set only for Goods after posting
 }
@@ -44,6 +47,7 @@ public class CreateSaleRequest
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
 }
 
 public class CreateSaleLineRequest
@@ -55,7 +59,9 @@ public class CreateSaleLineRequest
     public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
-    public required string Currency { get; set; }
+    public required Currency Currency { get; set; }
+    public bool IsTaxable { get; set; } = true;
+    public bool AppliesShopFee { get; set; } = true;
 }
 
 public class SalesDashboardDto
