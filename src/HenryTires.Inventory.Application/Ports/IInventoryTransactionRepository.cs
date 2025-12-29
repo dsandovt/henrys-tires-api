@@ -1,6 +1,6 @@
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Application.Ports;
 
@@ -36,5 +36,5 @@ public interface IInventoryTransactionRepository
 
     // Custom command methods
     Task<InventoryTransaction> CreateAsync(InventoryTransaction transaction);
-    Task UpdateAsync(InventoryTransaction transaction, IClientSessionHandle? session = null);
+    Task UpdateAsync(InventoryTransaction transaction, ITransactionScope? transactionScope = null);
 }

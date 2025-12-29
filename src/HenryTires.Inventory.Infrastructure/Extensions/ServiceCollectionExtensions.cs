@@ -58,7 +58,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<ICurrentUser, CurrentUserService>();
-        services.AddSingleton<IMongoUnitOfWork, MongoUnitOfWork>();
+
+        // Transaction and identity adapters
+        services.AddSingleton<HenryTires.Inventory.Application.Ports.Outbound.IUnitOfWork, HenryTires.Inventory.Infrastructure.Adapters.Transactions.MongoUnitOfWork>();
+        services.AddSingleton<HenryTires.Inventory.Application.Ports.Outbound.IIdentityGenerator, HenryTires.Inventory.Infrastructure.Adapters.Identity.MongoIdentityGenerator>();
+
         services.AddSingleton<HenryTires.Inventory.Application.Common.ITimezoneConverter, TimezoneConverter>();
 
         // Domain Services

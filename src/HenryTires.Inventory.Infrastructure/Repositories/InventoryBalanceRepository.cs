@@ -1,8 +1,10 @@
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
+using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Infrastructure.Repositories;
@@ -137,9 +139,10 @@ public class InventoryBalanceRepository : CrudRepository<InventoryBalanceDocumen
         return documents.Select(InventoryBalanceDocumentMapper.ToEntity);
     }
 
-    public async Task UpsertAsync(InventoryBalance balance, IClientSessionHandle? session = null)
+    public async Task UpsertAsync(InventoryBalance balance, ITransactionScope? transactionScope = null)
     {
         var document = InventoryBalanceDocumentMapper.ToDocument(balance);
+        var session = transactionScope.ToMongoSession();
         await base.UpsertAsync(balance.Id, document, session);
     }
 }

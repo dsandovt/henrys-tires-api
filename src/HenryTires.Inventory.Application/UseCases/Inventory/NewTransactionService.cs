@@ -1,10 +1,10 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
 using HenryTires.Inventory.Domain.Services;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Inventory;
 
@@ -21,7 +21,8 @@ public class NewTransactionService
     private readonly PriceResolutionService _priceResolutionService;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
-    private readonly IMongoUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IIdentityGenerator _identityGenerator;
 
     public NewTransactionService(
         IItemRepository itemRepository,
@@ -32,7 +33,8 @@ public class NewTransactionService
         PriceResolutionService priceResolutionService,
         ICurrentUser currentUser,
         IClock clock,
-        IMongoUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IIdentityGenerator identityGenerator)
     {
         _itemRepository = itemRepository;
         _priceRepository = priceRepository;
@@ -43,6 +45,7 @@ public class NewTransactionService
         _currentUser = currentUser;
         _clock = clock;
         _unitOfWork = unitOfWork;
+        _identityGenerator = identityGenerator;
     }
 
     /// <summary>
@@ -92,7 +95,7 @@ public class NewTransactionService
 
             var line = new InventoryTransactionLine
             {
-                LineId = ObjectId.GenerateNewId().ToString(),
+                LineId = _identityGenerator.GenerateId(),
                 ItemId = item.Id,
                 ItemCode = lineRequest.ItemCode,
                 Condition = condition,
@@ -112,12 +115,12 @@ public class NewTransactionService
         }
 
         // Generate transaction number (simple format - can be enhanced)
-        var transactionNumber = $"IN-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString().Substring(0, 8).ToUpper()}";
+        var transactionNumber = $"IN-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId().Substring(0, 8).ToUpper()}";
 
         // Create transaction
         var transaction = new InventoryTransaction
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             TransactionNumber = transactionNumber,
             BranchCode = branchCode,
             Type = TransactionType.In,
@@ -200,7 +203,7 @@ public class NewTransactionService
 
             var line = new InventoryTransactionLine
             {
-                LineId = ObjectId.GenerateNewId().ToString(),
+                LineId = _identityGenerator.GenerateId(),
                 ItemId = item.Id,
                 ItemCode = lineRequest.ItemCode,
                 Condition = condition,
@@ -220,12 +223,12 @@ public class NewTransactionService
         }
 
         // Generate transaction number
-        var transactionNumber = $"OUT-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString().Substring(0, 8).ToUpper()}";
+        var transactionNumber = $"OUT-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId().Substring(0, 8).ToUpper()}";
 
         // Create transaction
         var transaction = new InventoryTransaction
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             TransactionNumber = transactionNumber,
             BranchCode = branchCode,
             Type = TransactionType.Out,
@@ -291,7 +294,7 @@ public class NewTransactionService
 
             var line = new InventoryTransactionLine
             {
-                LineId = ObjectId.GenerateNewId().ToString(),
+                LineId = _identityGenerator.GenerateId(),
                 ItemId = item.Id,
                 ItemCode = lineRequest.ItemCode,
                 Condition = condition,
@@ -311,12 +314,12 @@ public class NewTransactionService
         }
 
         // Generate transaction number
-        var transactionNumber = $"ADJ-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString().Substring(0, 8).ToUpper()}";
+        var transactionNumber = $"ADJ-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId().Substring(0, 8).ToUpper()}";
 
         // Create transaction
         var transaction = new InventoryTransaction
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             TransactionNumber = transactionNumber,
             BranchCode = branchCode,
             Type = TransactionType.Adjust,
@@ -340,11 +343,9 @@ public class NewTransactionService
     /// </summary>
     public async Task<NewTransactionDto> CommitTransactionAsync(CommitTransactionRequest request)
     {
-        using var session = await _unitOfWork.StartSessionAsync();
+        using var scope = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            session.StartTransaction();
-
             // Get transaction
             var transaction = await _transactionRepository.GetByIdAsync(request.TransactionId);
             if (transaction == null)
@@ -365,14 +366,14 @@ public class NewTransactionService
                 var itemCode = itemGroup.Key;
 
                 // Get or create inventory summary
-                var summary = await _summaryRepository.GetByKeyAsync(transaction.BranchCode, itemCode, session);
+                var summary = await _summaryRepository.GetByKeyAsync(transaction.BranchCode, itemCode, scope);
 
                 if (summary == null)
                 {
                     // Create new summary
                     summary = new InventorySummary
                     {
-                        Id = ObjectId.GenerateNewId().ToString(),
+                        Id = _identityGenerator.GenerateId(),
                         BranchCode = transaction.BranchCode,
                         ItemCode = itemCode,
                         Entries = new List<InventoryEntry>(),
@@ -388,24 +389,24 @@ public class NewTransactionService
                 summary.UpdatedAtUtc = _clock.UtcNow;
 
                 // Upsert with optimistic concurrency check
-                await _summaryRepository.UpsertWithVersionCheckAsync(summary, session);
+                await _summaryRepository.UpsertWithVersionCheckAsync(summary, scope);
             }
 
             // Save updated transaction
             await _transactionRepository.UpdateAsync(transaction);
 
-            await session.CommitTransactionAsync();
+            await scope.CommitAsync();
 
             return NewTransactionDto.FromEntity(transaction);
         }
         catch (ConcurrencyException)
         {
-            await session.AbortTransactionAsync();
+            await scope.RollbackAsync();
             throw; // Re-throw concurrency exception
         }
         catch
         {
-            await session.AbortTransactionAsync();
+            await scope.RollbackAsync();
             throw;
         }
     }

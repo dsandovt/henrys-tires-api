@@ -1,9 +1,9 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Auth;
 
@@ -14,13 +14,15 @@ public class AuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IClock _clock;
+    private readonly IIdentityGenerator _identityGenerator;
 
     public AuthService(
         IUserRepository userRepository,
         IBranchRepository branchRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
-        IClock clock
+        IClock clock,
+        IIdentityGenerator identityGenerator
     )
     {
         _userRepository = userRepository;
@@ -28,6 +30,7 @@ public class AuthService
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
         _clock = clock;
+        _identityGenerator = identityGenerator;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -68,7 +71,7 @@ public class AuthService
 
         var admin = new User
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             Username = "admin",
             PasswordHash = _passwordHasher.Hash("admin123"),
             Role = Role.Admin,
@@ -94,7 +97,7 @@ public class AuthService
             {
                 var user = new User
                 {
-                    Id = ObjectId.GenerateNewId().ToString(),
+                    Id = _identityGenerator.GenerateId(),
                     Username = username,
                     PasswordHash = _passwordHasher.Hash(username + "123"),
                     Role = Role.Seller,

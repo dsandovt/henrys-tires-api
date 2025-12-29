@@ -1,6 +1,6 @@
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Application.Ports;
 
@@ -11,12 +11,12 @@ namespace HenryTires.Inventory.Application.Ports;
 public interface IInventorySummaryRepository
 {
     // Custom query methods
-    Task<InventorySummary?> GetByKeyAsync(string branchCode, string itemCode, IClientSessionHandle? session = null);
+    Task<InventorySummary?> GetByKeyAsync(string branchCode, string itemCode, ITransactionScope? transactionScope = null);
     Task<IEnumerable<InventorySummary>> GetByBranchAsync(string? branchCode, string? search, ItemCondition? condition, int page, int pageSize);
     Task<long> CountByBranchAsync(string? branchCode, string? search, ItemCondition? condition);
     Task<int> GetTotalQuantityByBranchAsync(string branchCode);
 
     // Custom command methods with transaction support
-    Task UpsertAsync(InventorySummary summary, IClientSessionHandle? session = null);
-    Task UpsertWithVersionCheckAsync(InventorySummary summary, IClientSessionHandle session);
+    Task UpsertAsync(InventorySummary summary, ITransactionScope? transactionScope = null);
+    Task UpsertWithVersionCheckAsync(InventorySummary summary, ITransactionScope transactionScope);
 }

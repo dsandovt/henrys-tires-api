@@ -1,9 +1,11 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
+using HenryTires.Inventory.Infrastructure.Adapters.Transactions;
 using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Infrastructure.Repositories;
@@ -28,9 +30,11 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
     public async Task<InventorySummary?> GetByKeyAsync(
         string branchCode,
         string itemCode,
-        IClientSessionHandle? session = null
+        ITransactionScope? transactionScope = null
     )
     {
+        var session = transactionScope.ToMongoSession();
+
         var filter = Builders<InventorySummaryDocument>.Filter.And(
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode),
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.ItemCode, itemCode)
@@ -141,18 +145,23 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
         return documents.Sum(s => s.OnHandTotal);
     }
 
-    public async Task UpsertAsync(InventorySummary summary, IClientSessionHandle? session = null)
+    public async Task UpsertAsync(InventorySummary summary, ITransactionScope? transactionScope = null)
     {
         var document = InventorySummaryDocumentMapper.ToDocument(summary);
+        var session = transactionScope.ToMongoSession();
         await base.UpsertAsync(summary.Id, document, session);
     }
 
     public async Task UpsertWithVersionCheckAsync(
         InventorySummary summary,
-        IClientSessionHandle session
+        ITransactionScope transactionScope
     )
     {
         var document = InventorySummaryDocumentMapper.ToDocument(summary);
+        var session = transactionScope.ToMongoSession();
+
+        if (session == null)
+            throw new InvalidOperationException("UpsertWithVersionCheckAsync requires a transaction scope.");
 
         var filter = Builders<InventorySummaryDocument>.Filter.And(
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, summary.BranchCode),

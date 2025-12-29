@@ -1,8 +1,8 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Inventory;
 
@@ -15,17 +15,20 @@ public class PriceManagementService
     private readonly IConsumableItemPriceRepository _priceRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
+    private readonly IIdentityGenerator _identityGenerator;
 
     public PriceManagementService(
         IItemRepository itemRepository,
         IConsumableItemPriceRepository priceRepository,
         ICurrentUser currentUser,
-        IClock clock)
+        IClock clock,
+        IIdentityGenerator identityGenerator)
     {
         _itemRepository = itemRepository;
         _priceRepository = priceRepository;
         _currentUser = currentUser;
         _clock = clock;
+        _identityGenerator = identityGenerator;
     }
 
     /// <summary>
@@ -64,7 +67,7 @@ public class PriceManagementService
             // Create new price record
             priceRecord = new ConsumableItemPrice
             {
-                Id = ObjectId.GenerateNewId().ToString(),
+                Id = _identityGenerator.GenerateId(),
                 ItemCode = itemCode,
                 Currency = request.Currency,
                 LatestPrice = request.NewPrice,

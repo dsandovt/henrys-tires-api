@@ -1,8 +1,8 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Sales;
 
@@ -23,7 +23,8 @@ public class SaleService
     private readonly IInventorySummaryRepository _summaryRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
-    private readonly IMongoUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IIdentityGenerator _identityGenerator;
 
     public SaleService(
         ISaleRepository saleRepository,
@@ -32,7 +33,8 @@ public class SaleService
         IInventorySummaryRepository summaryRepository,
         ICurrentUser currentUser,
         IClock clock,
-        IMongoUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IIdentityGenerator identityGenerator)
     {
         _saleRepository = saleRepository;
         _itemRepository = itemRepository;
@@ -41,6 +43,7 @@ public class SaleService
         _currentUser = currentUser;
         _clock = clock;
         _unitOfWork = unitOfWork;
+        _identityGenerator = identityGenerator;
     }
 
     /// <summary>
@@ -105,11 +108,11 @@ public class SaleService
         }
 
         // Generate Sale Number
-        var saleNumber = $"SALE-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString()[..8].ToUpper()}";
+        var saleNumber = $"SALE-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId()[..8].ToUpper()}";
 
         var sale = new Sale
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             SaleNumber = saleNumber,
             BranchId = validBranchId,
             SaleDateUtc = saleDateUtc,
@@ -136,12 +139,10 @@ public class SaleService
     /// </summary>
     public async Task<Sale> PostSaleAsync(string saleId)
     {
-        using var session = await _unitOfWork.StartSessionAsync();
+        using var scope = await _unitOfWork.BeginTransactionAsync();
 
         try
         {
-            session.StartTransaction();
-
             var sale = await _saleRepository.GetByIdAsync(saleId)
                 ?? throw new NotFoundException($"Sale {saleId} not found");
 
@@ -158,11 +159,11 @@ public class SaleService
             // Create InventoryTransaction ONLY if there are Goods
             if (goodsLines.Any())
             {
-                var transactionNumber = $"OUT-{_clock.UtcNow:yyyyMMdd}-{ObjectId.GenerateNewId().ToString()[..8].ToUpper()}";
+                var transactionNumber = $"OUT-{_clock.UtcNow:yyyyMMdd}-{_identityGenerator.GenerateId()[..8].ToUpper()}";
 
                 var inventoryLines = goodsLines.Select(line => new InventoryTransactionLine
                 {
-                    LineId = ObjectId.GenerateNewId().ToString(),
+                    LineId = _identityGenerator.GenerateId(),
                     ItemId = line.ItemId,
                     ItemCode = line.ItemCode,
                     Condition = line.Condition!.Value, // Safe because validated earlier
@@ -178,7 +179,7 @@ public class SaleService
 
                 var inventoryTransaction = new InventoryTransaction
                 {
-                    Id = ObjectId.GenerateNewId().ToString(),
+                    Id = _identityGenerator.GenerateId(),
                     TransactionNumber = transactionNumber,
                     BranchCode = _currentUser.BranchCode!,
                     Type = TransactionType.Out,
@@ -196,7 +197,7 @@ public class SaleService
                 await _transactionRepository.CreateAsync(inventoryTransaction);
 
                 // Commit inventory (update summaries)
-                await CommitInventoryTransactionAsync(inventoryTransaction, session);
+                await CommitInventoryTransactionAsync(inventoryTransaction, scope);
 
                 inventoryTransactionId = inventoryTransaction.Id;
 
@@ -216,12 +217,12 @@ public class SaleService
 
             await _saleRepository.UpdateAsync(sale);
 
-            await session.CommitTransactionAsync();
+            await scope.CommitAsync();
             return sale;
         }
         catch
         {
-            await session.AbortTransactionAsync();
+            await scope.RollbackAsync();
             throw;
         }
     }
@@ -232,7 +233,7 @@ public class SaleService
     /// </summary>
     private async Task CommitInventoryTransactionAsync(
         InventoryTransaction transaction,
-        MongoDB.Driver.IClientSessionHandle session)
+        ITransactionScope scope)
     {
         // Update inventory summaries
         foreach (var line in transaction.Lines)
@@ -240,7 +241,7 @@ public class SaleService
             var summary = await _summaryRepository.GetByKeyAsync(
                 transaction.BranchCode,
                 line.ItemCode,
-                session);
+                scope);
 
             if (summary == null)
             {
@@ -248,7 +249,7 @@ public class SaleService
                 var initialQuantity = transaction.Type == TransactionType.In ? line.Quantity : -line.Quantity;
                 summary = new InventorySummary
                 {
-                    Id = ObjectId.GenerateNewId().ToString(),
+                    Id = _identityGenerator.GenerateId(),
                     BranchCode = transaction.BranchCode,
                     ItemCode = line.ItemCode,
                     Entries = new List<InventoryEntry>
@@ -295,7 +296,7 @@ public class SaleService
             summary.OnHandTotal = summary.Entries.Sum(e => e.OnHand);
             summary.ReservedTotal = summary.Entries.Sum(e => e.Reserved);
 
-            await _summaryRepository.UpsertAsync(summary, session);
+            await _summaryRepository.UpsertAsync(summary, scope);
         }
 
         // Mark transaction as committed
@@ -305,7 +306,7 @@ public class SaleService
         transaction.ModifiedAtUtc = _clock.UtcNow;
         transaction.ModifiedBy = _currentUser.Username;
 
-        await _transactionRepository.UpdateAsync(transaction, session);
+        await _transactionRepository.UpdateAsync(transaction, scope);
     }
 
     public async Task<Sale?> GetSaleByIdAsync(string saleId)

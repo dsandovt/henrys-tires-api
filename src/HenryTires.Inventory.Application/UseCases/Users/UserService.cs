@@ -1,9 +1,9 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Bson;
 
 namespace HenryTires.Inventory.Application.UseCases.Users;
 
@@ -14,19 +14,22 @@ public class UserService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IClock _clock;
     private readonly ICurrentUser _currentUser;
+    private readonly IIdentityGenerator _identityGenerator;
 
     public UserService(
         IUserRepository userRepository,
         IBranchRepository branchRepository,
         IPasswordHasher passwordHasher,
         IClock clock,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IIdentityGenerator identityGenerator)
     {
         _userRepository = userRepository;
         _branchRepository = branchRepository;
         _passwordHasher = passwordHasher;
         _clock = clock;
         _currentUser = currentUser;
+        _identityGenerator = identityGenerator;
     }
 
     public async Task<UserListResponse> GetUsersAsync(int page, int pageSize, string? search)
@@ -87,7 +90,7 @@ public class UserService
 
         var user = new User
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = _identityGenerator.GenerateId(),
             Username = request.Username,
             PasswordHash = _passwordHasher.Hash(request.Password),
             Role = role,

@@ -1,6 +1,6 @@
+using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
-using MongoDB.Driver;
 
 namespace HenryTires.Inventory.Application.Ports;
 
@@ -18,5 +18,5 @@ public interface IInventoryBalanceRepository
     Task<IEnumerable<InventoryBalance>> GetAllBranchesStockAsync(string? search, ItemCondition? condition);
 
     // Custom command methods
-    Task UpsertAsync(InventoryBalance balance, IClientSessionHandle? session = null);
+    Task UpsertAsync(InventoryBalance balance, ITransactionScope? transactionScope = null);
 }

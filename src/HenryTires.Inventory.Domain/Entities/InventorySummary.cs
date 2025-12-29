@@ -1,4 +1,3 @@
-using System.Linq;
 using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Domain.Entities;
