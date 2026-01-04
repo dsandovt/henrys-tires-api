@@ -41,7 +41,7 @@ public class SaleLineDto
 
 public class CreateSaleRequest
 {
-    public string? BranchId { get; set; } // Required for Admin users
+    public string? BranchCode { get; set; } // Required for Admin users
     public required DateTime SaleDateUtc { get; set; }
     public required List<CreateSaleLineRequest> Lines { get; set; }
     public string? CustomerName { get; set; }
