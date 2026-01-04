@@ -48,8 +48,12 @@ public class SaleService : ISaleService
 
     public async Task<Sale> CreateSaleAsync(CreateSaleRequest request)
     {
-        // Get branch to construct sale number
-        var branch = await ValidateBranchAccessAsync(request.BranchId);
+        // Validate branch access and get branch code
+        string branchCode = ValidateBranchAccess(request.BranchCode);
+
+        // Get branch entity to construct sale number
+        Branch branch = await _branchRepository.GetByCodeAsync(branchCode)
+            ?? throw new NotFoundException($"Branch {branchCode} not found");
 
         var lines = request
             .Lines.Select(l => new SaleLine
@@ -341,20 +345,15 @@ public class SaleService : ISaleService
         return await _saleRepository.CountAsync(branchId, from, to);
     }
 
-    private async Task<Branch> ValidateBranchAccessAsync(string? branchId)
+    private string ValidateBranchAccess(string? branchCode)
     {
         if (_currentUser.Role == Role.Admin)
         {
-            if (string.IsNullOrWhiteSpace(branchId))
+            if (string.IsNullOrWhiteSpace(branchCode))
             {
-                throw new ValidationException("BranchId is required for Admin users");
+                throw new ValidationException("BranchCode is required for Admin users");
             }
-
-            var branch =
-                await _branchRepository.GetByIdAsync(branchId)
-                ?? throw new NotFoundException($"Branch {branchId} not found");
-
-            return branch;
+            return branchCode;
         }
         else
         {
@@ -370,13 +369,7 @@ public class SaleService : ISaleService
                 );
             }
 
-            var branch =
-                await _branchRepository.GetByIdAsync(_currentUser.BranchId)
-                ?? throw new NotFoundException(
-                    $"Branch {_currentUser.BranchId} not found for user {_currentUser.Username}"
-                );
-
-            return branch;
+            return _currentUser.BranchCode;
         }
     }
 }

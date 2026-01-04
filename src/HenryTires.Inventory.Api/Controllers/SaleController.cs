@@ -29,17 +29,17 @@ public class SaleController : ControllerBase
         // StoreSeller users can only create sales for their own branch
         if (_currentUser.UserRole == Role.StoreSeller)
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            if (string.IsNullOrEmpty(_currentUser.BranchCode))
             {
                 return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
             }
             // Force the sale to be created for the user's branch
-            request.BranchId = _currentUser.BranchId;
+            request.BranchCode = _currentUser.BranchCode;
         }
 
-        var sale = await _saleService.CreateSaleAsync(request);
-        var dto = MapToDto(sale);
-        var response = ApiResponse<SaleDto>.SuccessResponse(dto);
+        Sale sale = await _saleService.CreateSaleAsync(request);
+        SaleDto dto = MapToDto(sale);
+        ApiResponse<SaleDto> response = ApiResponse<SaleDto>.SuccessResponse(dto);
         return CreatedAtAction(nameof(GetSaleById), new { id = sale.Id }, response);
     }
 
