@@ -87,4 +87,19 @@ public class UsersController : ControllerBase
         var result = await _userService.ToggleUserStatusAsync(id);
         return Ok(ApiResponse<UserDto>.SuccessResponse(result));
     }
+
+    [HttpPost("{id}/reset-password")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<object>>> ResetPassword(
+        string id,
+        [FromBody] ResetPasswordRequest request
+    )
+    {
+        await _userService.ResetPasswordAsync(id, request.NewPassword);
+        return Ok(
+            ApiResponse<object>.SuccessResponse(new { message = "Password reset successfully" })
+        );
+    }
 }

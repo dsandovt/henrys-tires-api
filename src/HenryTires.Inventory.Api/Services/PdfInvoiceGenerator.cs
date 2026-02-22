@@ -1,3 +1,4 @@
+using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -7,6 +8,13 @@ namespace HenryTires.Inventory.Api.Services;
 
 public class PdfInvoiceGenerator
 {
+    private readonly ITimezoneConverter _timezoneConverter;
+
+    public PdfInvoiceGenerator(ITimezoneConverter timezoneConverter)
+    {
+        _timezoneConverter = timezoneConverter;
+    }
+
     public byte[] GenerateInvoice(InvoiceDto invoice)
     {
         // Configure QuestPDF license (Community license for development)
@@ -17,14 +25,16 @@ public class PdfInvoiceGenerator
             container.Page(page =>
             {
                 page.Size(PageSizes.Letter);
-                page.Margin(40);
+                page.Margin(35);
 
                 page.Header().Element(content => ComposeHeader(content, invoice));
                 page.Content().Element(content => ComposeContent(content, invoice));
                 page.Footer().AlignCenter().Text(text =>
                 {
                     text.Span("Generated on ");
-                    text.Span(invoice.GeneratedAtUtc.ToString("MM/dd/yyyy HH:mm:ss UTC"));
+                    var generatedLocal = _timezoneConverter.ConvertUtcToEastern(invoice.GeneratedAtUtc);
+                    var tzAbbr = _timezoneConverter.GetTimezoneAbbreviation(invoice.GeneratedAtUtc);
+                    text.Span(generatedLocal.ToString($"MM/dd/yyyy hh:mm:ss tt") + $" {tzAbbr}");
                     text.Span(" | Page ");
                     text.CurrentPageNumber();
                     text.Span(" of ");
@@ -71,11 +81,24 @@ public class PdfInvoiceGenerator
                 row.RelativeItem().Column(col =>
                 {
                     col.Spacing(3);
-                    col.Item().Text("INVOICE").FontSize(14).SemiBold();
+                    col.Item().Text(invoice.DocumentType ?? "INVOICE").FontSize(14).SemiBold();
                     col.Item().Text($"Invoice #: {invoice.InvoiceNumber}").FontSize(10);
-                    col.Item().Text($"Date: {invoice.InvoiceDateUtc:MM/dd/yyyy}").FontSize(10);
+                    var invoiceDateLocal = _timezoneConverter.ConvertUtcToEastern(invoice.InvoiceDateUtc);
+                    col.Item().Text($"Date: {invoiceDateLocal:MM/dd/yyyy}").FontSize(10);
                     col.Item().Text($"Branch: {invoice.BranchCode} - {invoice.BranchName}").FontSize(10);
-                    col.Item().Text($"Payment Method: {invoice.PaymentMethod}").FontSize(10);
+                    if (invoice.PaymentDetails != null && invoice.PaymentDetails.Any())
+                    {
+                        col.Item().Text("Payment Methods:").FontSize(10);
+                        foreach (var pd in invoice.PaymentDetails)
+                        {
+                            var checkInfo = !string.IsNullOrEmpty(pd.CheckNumber) ? $" (Check #{pd.CheckNumber})" : "";
+                            col.Item().Text($"  {pd.Method} - ${pd.Amount:N2}{checkInfo}").FontSize(9).FontColor(Colors.Grey.Darken1);
+                        }
+                    }
+                    else
+                    {
+                        col.Item().Text($"Payment Method: {invoice.PaymentMethod}").FontSize(10);
+                    }
                 });
 
                 // Right column - Customer information
@@ -233,7 +256,7 @@ public class PdfInvoiceGenerator
                 });
             });
 
-            column.Item().PaddingTop(15);
+            column.Item().PaddingTop(6);
 
             // DISCLAIMER SECTION - MOST IMPORTANT
             column.Item().Column(col =>
@@ -242,18 +265,18 @@ public class PdfInvoiceGenerator
 
                 col.Item().PaddingBottom(5).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
 
-                col.Item().Text("DISCLAIMER").FontSize(9).SemiBold();
+                col.Item().Text("DISCLAIMER").FontSize(7).SemiBold();
 
                 col.Item().Text("ALL NEW TIRES ARE PURCHASED \"AS-IS\" WITHOUT WARRANTY UNLESS PROVIDED BY MANUFACTURE. ALL SALES ARE FINAL. NEW TIRES AND INNER TUBERS ARE SOLD \"AS-IS\" WITH ALL FAULTS AND WITH NO WARRANTY BY HENRY'S TIRES. HENRY'S TIRES HEREBY DISCLAIMS ANY WARRANTIES EXPRESSED OR IMPLIED OF MERCHANTABILITY OR FIRNESS FOR ANY PARTICULAR PURPOSE AND WITHOUT WARRANTY OR ANY KIND OR NATURE AS TO THE DESIGN, MANUFACTURE, STRUCTURAL INTEGRITY OR EXPECTED LIFE OF THE TIRE, INNER TUBE AND/OR CHAINS. BUYER ACKNOWLEDGES THAT HE/SHE HAS EXAMINED THE TIRE AND/OR INNER TUBE AND ACCEPTS THE SAME \"AS-IS\" WITH NO WARRANTIES OR GARENTEES. BUY AT YOUR OWN RISK. HENRYS TIRES DOES NOT EXTEND WARRANTIES, EITHER EXPRESS OR IMPLIED HENRYS TIRES DOES NOT ASSUME ANY WARRANTY OR LEGAL OBLIGATION OF ANY MANUFACTURER, DISTRIBUTOR, OR IMPORTER OF ANY PRODUCT OFFERED FOR SALE BY HENRYS TIRES. NO HENRYS TIRES EMPLOYEE OR DEALER HAS THE AUTHORITY TO MAKE ANY WARRANTY, REPRESENTATION, PROMISE OR AGREEMENT ON BEHALF OF HENRY'S TIRES EXCEPT AND REPRESENTATIONS MADE IN WRITING BY THE COMPANY'S PRESIDENT. TO THE EXTENT PERMITTED BY LAW, HENRYS TIRES DISCLAIMS LIABILITY FOR ALL CONSEQUENTIAL AND INCIDENTAL DAMAGES. BY SIGNING BELOW, I AGREE THAT I HAVE READ AND UNDERSTAND THAT I AM BUYING USED TIRES AT MY OWN RISK AND THAT HENRYS TIRES MAKES NO REPRESENTATIONS ABOUT THE CONDITION THAT THERE IS NO EXPRESSED OR IMPLIED WARRANTY.")
-                    .FontSize(9)
-                    .LineHeight(1.3f);
+                    .FontSize(6.5f)
+                    .LineHeight(1.05f);
 
-                col.Item().PaddingTop(10).Row(row =>
+                col.Item().PaddingTop(4).Row(row =>
                 {
                     row.RelativeItem().Column(c =>
                     {
                         c.Item().Text("PRINT NAME").FontSize(8).FontColor(Colors.Grey.Darken1);
-                        c.Item().PaddingTop(15).LineHorizontal(1).LineColor(Colors.Black);
+                        c.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Black);
                     });
 
                     row.ConstantItem(20); // Spacing
@@ -261,7 +284,7 @@ public class PdfInvoiceGenerator
                     row.RelativeItem().Column(c =>
                     {
                         c.Item().Text("SIGNATURE").FontSize(8).FontColor(Colors.Grey.Darken1);
-                        c.Item().PaddingTop(15).LineHorizontal(1).LineColor(Colors.Black);
+                        c.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Black);
                     });
 
                     row.ConstantItem(20); // Spacing
@@ -269,7 +292,7 @@ public class PdfInvoiceGenerator
                     row.RelativeItem().Column(c =>
                     {
                         c.Item().Text("DATE").FontSize(8).FontColor(Colors.Grey.Darken1);
-                        c.Item().PaddingTop(15).LineHorizontal(1).LineColor(Colors.Black);
+                        c.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Black);
                     });
                 });
             });

@@ -29,6 +29,8 @@ public class BranchesController : ControllerBase
             Id = b.Id,
             Code = b.Code,
             Name = b.Name,
+            Address = b.Address,
+            Phone = b.Phone,
         });
 
         return Ok(ApiResponse<IEnumerable<BranchDto>>.SuccessResponse(dtos));
