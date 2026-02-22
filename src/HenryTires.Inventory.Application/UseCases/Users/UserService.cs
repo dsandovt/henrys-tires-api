@@ -212,6 +212,21 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
+    public async Task ResetPasswordAsync(string userId, string newPassword)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException($"User with ID '{userId}' not found");
+        }
+
+        user.PasswordHash = _passwordHasher.Hash(newPassword);
+        user.ModifiedAtUtc = _clock.UtcNow;
+        user.ModifiedBy = _currentUser.Username;
+
+        await _userRepository.UpdateAsync(user);
+    }
+
     private static UserDto MapToDto(User user)
     {
         return new UserDto

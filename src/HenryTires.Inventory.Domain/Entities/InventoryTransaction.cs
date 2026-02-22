@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Domain.Common;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Domain.ValueObjects;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
@@ -13,6 +14,7 @@ public class InventoryTransaction : AuditTrail
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
+    public List<PaymentDetail>? PaymentDetails { get; set; }
     public DateTime? CommittedAtUtc { get; set; }
     public string? CommittedBy { get; set; }
     public required List<InventoryTransactionLine> Lines { get; set; }

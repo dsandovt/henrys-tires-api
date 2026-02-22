@@ -11,5 +11,6 @@ public enum PaymentMethod
     Cash,
     Card,
     AcimaShortTermCredit,
-    AccountsReceivable
+    AccountsReceivable,
+    Check
 }

@@ -9,6 +9,7 @@ public class CreateInTransactionRequest
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
     public required List<InTransactionLineRequest> Lines { get; set; }
 }
 
@@ -30,6 +31,7 @@ public class CreateOutTransactionRequest
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
     public required List<OutTransactionLineRequest> Lines { get; set; }
 }
 
@@ -85,6 +87,7 @@ public class NewTransactionDto
     public required DateTime TransactionDateUtc { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
     public DateTime? CommittedAtUtc { get; set; }
     public string? CommittedBy { get; set; }
     public required List<NewTransactionLineDto> Lines { get; set; }
@@ -105,6 +108,12 @@ public class NewTransactionDto
             TransactionDateUtc = transaction.TransactionDateUtc,
             Notes = transaction.Notes,
             PaymentMethod = transaction.PaymentMethod,
+            PaymentDetails = transaction.PaymentDetails?.Select(pd => new PaymentDetailDto
+            {
+                Method = pd.Method.ToString(),
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             CommittedAtUtc = transaction.CommittedAtUtc,
             CommittedBy = transaction.CommittedBy,
             Lines = transaction.Lines.Select(NewTransactionLineDto.FromEntity).ToList(),

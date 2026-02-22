@@ -45,6 +45,7 @@ public class InvoiceDto
     public required string BranchCode { get; set; }
     public required string BranchName { get; set; }
     public required string PaymentMethod { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
 
     // Customer Information
     public string? CustomerName { get; set; }
@@ -62,6 +63,7 @@ public class InvoiceDto
 
     // Generation Info
     public required DateTime GeneratedAtUtc { get; set; }
+    public string DocumentType { get; set; } = "INVOICE";
 }
 
 public class InvoiceCompanyInfoDto

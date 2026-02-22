@@ -1,5 +1,6 @@
 using HenryTires.Inventory.Domain.Common;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Domain.ValueObjects;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
@@ -14,6 +15,7 @@ public class Sale : AuditTrail
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+    public List<PaymentDetail>? PaymentDetails { get; set; }
     public TransactionStatus Status { get; set; }
     public DateTime? PostedAtUtc { get; set; }
     public string? PostedBy { get; set; }

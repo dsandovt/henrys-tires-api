@@ -2,6 +2,7 @@ using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Domain.ValueObjects;
 
 namespace HenryTires.Inventory.Application.UseCases.Reports;
 
@@ -145,7 +146,7 @@ public class ReportService : IReportService
             throw new InvalidOperationException($"Branch with ID {sale.BranchId} not found");
 
         // Get company info from provider
-        var companyInfo = _companyInfoProvider.GetCompanyInfo();
+        var companyInfo = _companyInfoProvider.GetCompanyInfo(branch.Address, branch.Phone);
 
         var invoiceLines = sale.Lines.Select(line => new InvoiceLineDto
         {
@@ -170,7 +171,15 @@ public class ReportService : IReportService
             InvoiceDateUtc = sale.SaleDateUtc,
             BranchCode = branch.Code,
             BranchName = branch.Name,
-            PaymentMethod = sale.PaymentMethod.ToString(),
+            PaymentMethod = sale.PaymentDetails != null && sale.PaymentDetails.Any()
+                ? string.Join(" / ", sale.PaymentDetails.Select(pd => $"{pd.Method} ${pd.Amount:N2}"))
+                : sale.PaymentMethod.ToString(),
+            PaymentDetails = sale.PaymentDetails?.Select(pd => new PaymentDetailDto
+            {
+                Method = pd.Method.ToString(),
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             CustomerName = sale.CustomerName,
             CustomerNumber = null, // Not tracked in Sale entity yet
             CustomerPhone = sale.CustomerPhone,
@@ -179,7 +188,8 @@ public class ReportService : IReportService
             Notes = sale.Notes,
             Lines = invoiceLines,
             Totals = totals,
-            GeneratedAtUtc = _clock.UtcNow
+            GeneratedAtUtc = _clock.UtcNow,
+            DocumentType = "INVOICE"
         };
     }
 
@@ -194,7 +204,7 @@ public class ReportService : IReportService
             throw new InvalidOperationException($"Branch with code {transaction.BranchCode} not found");
 
         // Get company info from provider
-        var companyInfo = _companyInfoProvider.GetCompanyInfo();
+        var companyInfo = _companyInfoProvider.GetCompanyInfo(branch.Address, branch.Phone);
 
         var invoiceLines = transaction.Lines.Select(line => new InvoiceLineDto
         {
@@ -219,7 +229,15 @@ public class ReportService : IReportService
             InvoiceDateUtc = transaction.TransactionDateUtc,
             BranchCode = branch.Code,
             BranchName = branch.Name,
-            PaymentMethod = transaction.PaymentMethod?.ToString() ?? "N/A",
+            PaymentMethod = transaction.PaymentDetails != null && transaction.PaymentDetails.Any()
+                ? string.Join(" / ", transaction.PaymentDetails.Select(pd => $"{pd.Method} ${pd.Amount:N2}"))
+                : transaction.PaymentMethod?.ToString() ?? "N/A",
+            PaymentDetails = transaction.PaymentDetails?.Select(pd => new PaymentDetailDto
+            {
+                Method = pd.Method.ToString(),
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             CustomerName = null,
             CustomerNumber = null,
             CustomerPhone = null,
@@ -228,7 +246,13 @@ public class ReportService : IReportService
             Notes = transaction.Notes,
             Lines = invoiceLines,
             Totals = totals,
-            GeneratedAtUtc = _clock.UtcNow
+            GeneratedAtUtc = _clock.UtcNow,
+            DocumentType = transaction.Type switch
+            {
+                TransactionType.In => "TRANSFER IN",
+                TransactionType.Out => "TRANSFER OUT",
+                _ => "TRANSACTION"
+            }
         };
     }
 
@@ -242,11 +266,11 @@ public class ReportService : IReportService
     {
         // Parse enum values from strings
         TransactionType? parsedType = null;
-        if (!string.IsNullOrEmpty(transactionType) && Enum.TryParse<TransactionType>(transactionType, out var type))
+        if (!string.IsNullOrEmpty(transactionType) && Enum.TryParse<TransactionType>(transactionType, true, out var type))
             parsedType = type;
 
         TransactionStatus? parsedStatus = null;
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<TransactionStatus>(status, out var stat))
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<TransactionStatus>(status, true, out var stat))
             parsedStatus = stat;
 
         // Get branch name if specific branch requested

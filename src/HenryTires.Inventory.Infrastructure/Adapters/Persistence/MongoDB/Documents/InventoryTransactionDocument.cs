@@ -25,6 +25,8 @@ public class InventoryTransactionDocument
     [BsonRepresentation(BsonType.String)]
     public PaymentMethod? PaymentMethod { get; set; }
 
+    public List<PaymentDetailDocument>? PaymentDetails { get; set; }
+
     public DateTime? CommittedAtUtc { get; set; }
     public string? CommittedBy { get; set; }
     public required List<InventoryTransactionLineDocument> Lines { get; set; }

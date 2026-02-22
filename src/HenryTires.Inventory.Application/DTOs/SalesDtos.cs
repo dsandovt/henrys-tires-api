@@ -13,6 +13,7 @@ public class SaleDto
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
     public required PaymentMethod PaymentMethod { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
     public required TransactionStatus Status { get; set; }
     public DateTime? PostedAtUtc { get; set; }
     public string? PostedBy { get; set; }
@@ -39,6 +40,13 @@ public class SaleLineDto
     public string? InventoryTransactionId { get; set; } // Set only for Goods after posting
 }
 
+public class PaymentDetailDto
+{
+    public required string Method { get; set; }
+    public required decimal Amount { get; set; }
+    public string? CheckNumber { get; set; }
+}
+
 public class CreateSaleRequest
 {
     public string? BranchCode { get; set; } // Required for Admin users
@@ -48,6 +56,7 @@ public class CreateSaleRequest
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
 }
 
 public class CreateSaleLineRequest

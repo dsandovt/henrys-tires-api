@@ -1,13 +1,18 @@
 using HenryTires.Inventory.Application.Common;
+using Microsoft.Extensions.Configuration;
 
 namespace HenryTires.Inventory.Infrastructure.Services;
 
-/// <summary>
-/// Converts UTC dates to Eastern Time (Newport News, VA timezone)
-/// </summary>
 public class TimezoneConverter : ITimezoneConverter
 {
-    private static readonly TimeZoneInfo EasternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+    private readonly TimeZoneInfo _timeZone;
+    private readonly string _timezoneId;
+
+    public TimezoneConverter(IConfiguration configuration)
+    {
+        _timezoneId = configuration["AppSettings:Timezone"] ?? "America/New_York";
+        _timeZone = TimeZoneInfo.FindSystemTimeZoneById(_timezoneId);
+    }
 
     public DateTime ConvertUtcToEastern(DateTime utcDateTime)
     {
@@ -16,12 +21,14 @@ public class TimezoneConverter : ITimezoneConverter
             utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
         }
 
-        return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, EasternTimeZone);
+        return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, _timeZone);
     }
 
     public string GetTimezoneAbbreviation(DateTime utcDateTime)
     {
-        var easternTime = ConvertUtcToEastern(utcDateTime);
-        return EasternTimeZone.IsDaylightSavingTime(easternTime) ? "EDT" : "EST";
+        var localTime = ConvertUtcToEastern(utcDateTime);
+        return _timeZone.IsDaylightSavingTime(localTime) ? "EDT" : "EST";
     }
+
+    public string GetTimezoneId() => _timezoneId;
 }

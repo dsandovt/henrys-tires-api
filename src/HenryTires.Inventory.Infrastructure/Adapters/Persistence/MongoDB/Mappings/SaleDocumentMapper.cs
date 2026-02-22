@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.ValueObjects;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 
 namespace HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
@@ -18,6 +19,12 @@ public static class SaleDocumentMapper
             CustomerPhone = document.CustomerPhone,
             Notes = document.Notes,
             PaymentMethod = document.PaymentMethod,
+            PaymentDetails = document.PaymentDetails?.Select(pd => new PaymentDetail
+            {
+                Method = pd.Method,
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             Status = document.Status,
             PostedAtUtc = document.PostedAtUtc,
             PostedBy = document.PostedBy,
@@ -41,6 +48,12 @@ public static class SaleDocumentMapper
             CustomerPhone = entity.CustomerPhone,
             Notes = entity.Notes,
             PaymentMethod = entity.PaymentMethod,
+            PaymentDetails = entity.PaymentDetails?.Select(pd => new PaymentDetailDocument
+            {
+                Method = pd.Method,
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             Status = entity.Status,
             PostedAtUtc = entity.PostedAtUtc,
             PostedBy = entity.PostedBy,

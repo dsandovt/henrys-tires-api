@@ -1,4 +1,5 @@
 using HenryTires.Inventory.Domain.Entities;
+using HenryTires.Inventory.Domain.ValueObjects;
 using HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 
 namespace HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Mappings;
@@ -17,6 +18,12 @@ public static class InventoryTransactionDocumentMapper
             TransactionDateUtc = document.TransactionDateUtc,
             Notes = document.Notes,
             PaymentMethod = document.PaymentMethod,
+            PaymentDetails = document.PaymentDetails?.Select(pd => new PaymentDetail
+            {
+                Method = pd.Method,
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             CommittedAtUtc = document.CommittedAtUtc,
             CommittedBy = document.CommittedBy,
             Lines = document.Lines.Select(ToLineEntity).ToList(),
@@ -39,6 +46,12 @@ public static class InventoryTransactionDocumentMapper
             TransactionDateUtc = entity.TransactionDateUtc,
             Notes = entity.Notes,
             PaymentMethod = entity.PaymentMethod,
+            PaymentDetails = entity.PaymentDetails?.Select(pd => new PaymentDetailDocument
+            {
+                Method = pd.Method,
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             CommittedAtUtc = entity.CommittedAtUtc,
             CommittedBy = entity.CommittedBy,
             Lines = entity.Lines.Select(ToLineDocument).ToList(),

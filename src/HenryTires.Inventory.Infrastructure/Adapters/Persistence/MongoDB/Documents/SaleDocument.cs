@@ -21,6 +21,8 @@ public class SaleDocument
     [BsonRepresentation(BsonType.String)]
     public required PaymentMethod PaymentMethod { get; set; }
 
+    public List<PaymentDetailDocument>? PaymentDetails { get; set; }
+
     [BsonRepresentation(BsonType.String)]
     public TransactionStatus Status { get; set; }
 

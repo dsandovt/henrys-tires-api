@@ -5,5 +5,6 @@ public enum Role
     Seller = 0,
     Supervisor = 1,
     Admin = 2,
-    StoreSeller = 3
+    StoreSeller = 3,
+    StockViewer = 4
 }

@@ -11,7 +11,9 @@ public static class BranchDocumentMapper
         {
             Id = document.Id,
             Code = document.Code,
-            Name = document.Name
+            Name = document.Name,
+            Address = document.Address,
+            Phone = document.Phone
         };
     }
 
@@ -21,7 +23,9 @@ public static class BranchDocumentMapper
         {
             Id = entity.Id,
             Code = entity.Code,
-            Name = entity.Name
+            Name = entity.Name,
+            Address = entity.Address,
+            Phone = entity.Phone
         };
     }
 }

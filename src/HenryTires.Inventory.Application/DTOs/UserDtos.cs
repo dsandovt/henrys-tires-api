@@ -36,3 +36,8 @@ public class UserListResponse
     public required int Page { get; set; }
     public required int PageSize { get; set; }
 }
+
+public class ResetPasswordRequest
+{
+    public required string NewPassword { get; set; }
+}

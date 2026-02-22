@@ -5,6 +5,7 @@ using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Application.Ports.Outbound;
 using HenryTires.Inventory.Domain.Entities;
 using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Domain.ValueObjects;
 
 namespace HenryTires.Inventory.Application.UseCases.Sales;
 
@@ -130,6 +131,12 @@ public class SaleService : ISaleService
             CustomerPhone = request.CustomerPhone,
             Notes = request.Notes,
             PaymentMethod = request.PaymentMethod,
+            PaymentDetails = request.PaymentDetails?.Select(pd => new PaymentDetail
+            {
+                Method = Enum.TryParse<PaymentMethod>(pd.Method, true, out var m) ? m : Domain.Enums.PaymentMethod.Cash,
+                Amount = pd.Amount,
+                CheckNumber = pd.CheckNumber
+            }).ToList(),
             Status = TransactionStatus.Draft,
             CreatedAtUtc = _clock.UtcNow,
             CreatedBy = _currentUser.Username,
