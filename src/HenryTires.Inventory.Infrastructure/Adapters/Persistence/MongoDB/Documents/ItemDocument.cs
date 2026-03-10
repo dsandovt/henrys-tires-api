@@ -1,10 +1,11 @@
+using HenryTires.Inventory.Domain.Common;
 using HenryTires.Inventory.Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 
-public class ItemDocument
+public class ItemDocument : AuditTrail
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
@@ -21,10 +22,4 @@ public class ItemDocument
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }
-
-    // AuditTrail
-    public required DateTime CreatedAtUtc { get; set; }
-    public required string CreatedBy { get; set; }
-    public DateTime? ModifiedAtUtc { get; set; }
-    public string? ModifiedBy { get; set; }
 }

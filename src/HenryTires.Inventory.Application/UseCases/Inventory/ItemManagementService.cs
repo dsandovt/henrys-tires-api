@@ -13,6 +13,7 @@ public class ItemManagementService : IItemManagementService
     private readonly IItemRepository _itemRepository;
     private readonly IConsumableItemPriceRepository _priceRepository;
     private readonly IInventorySummaryRepository _summaryRepository;
+    private readonly IBranchRepository _branchRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
     private readonly IIdentityGenerator _identityGenerator;
@@ -22,6 +23,7 @@ public class ItemManagementService : IItemManagementService
         IItemRepository itemRepository,
         IConsumableItemPriceRepository priceRepository,
         IInventorySummaryRepository summaryRepository,
+        IBranchRepository branchRepository,
         ICurrentUser currentUser,
         IClock clock,
         IIdentityGenerator identityGenerator,
@@ -31,6 +33,7 @@ public class ItemManagementService : IItemManagementService
         _itemRepository = itemRepository;
         _priceRepository = priceRepository;
         _summaryRepository = summaryRepository;
+        _branchRepository = branchRepository;
         _currentUser = currentUser;
         _clock = clock;
         _identityGenerator = identityGenerator;
@@ -70,8 +73,8 @@ public class ItemManagementService : IItemManagementService
             return ItemDto.FromEntity(existing);
         }
 
-        // Determine branch code for InventorySummary creation
-        var branchCode = ResolveBranchCode();
+        // Determine branch for InventorySummary creation
+        var (branchReference, branchCode) = await ResolveBranchAsync();
 
         // Use transaction to ensure atomicity
         using var scope = await _unitOfWork.BeginTransactionAsync();
@@ -99,6 +102,7 @@ public class ItemManagementService : IItemManagementService
             if (classification == Classification.Good)
             {
                 await CreateInventorySummaryIfNotExistsAsync(
+                    branchReference,
                     branchCode,
                     request.ItemCode,
                     scope
@@ -123,21 +127,23 @@ public class ItemManagementService : IItemManagementService
         }
     }
 
-    private string ResolveBranchCode()
+    private async Task<(string BranchReference, string BranchCode)> ResolveBranchAsync()
     {
-        // For now, use user's assigned branch code
-        // Admin users would need to have a default branch or specify one
-        if (string.IsNullOrWhiteSpace(_currentUser.BranchCode))
+        if (_currentUser.BranchReferences.Count == 0)
         {
             throw new ValidationException(
                 "User does not have an assigned branch. Cannot create Item inventory records."
             );
         }
 
-        return _currentUser.BranchCode;
+        var branch = await _branchRepository.GetByIdAsync(_currentUser.BranchReferences[0])
+            ?? throw new NotFoundException("User's assigned branch not found");
+
+        return (branch.Id, branch.Code);
     }
 
     private async Task CreateInventorySummaryIfNotExistsAsync(
+        string branchReference,
         string branchCode,
         string itemCode,
         ITransactionScope transactionScope
@@ -145,7 +151,7 @@ public class ItemManagementService : IItemManagementService
     {
         // Check if InventorySummary already exists
         var existing = await _summaryRepository.GetByKeyAsync(
-            branchCode,
+            branchReference,
             itemCode,
             transactionScope
         );
@@ -160,6 +166,7 @@ public class ItemManagementService : IItemManagementService
         var summary = new InventorySummary
         {
             Id = _identityGenerator.GenerateId(),
+            BranchReference = branchReference,
             BranchCode = branchCode,
             ItemCode = itemCode,
             Entries = new List<InventoryEntry>(),
@@ -196,7 +203,8 @@ public class ItemManagementService : IItemManagementService
             Currency = currency,
             LatestPrice = initialPrice,
             LatestPriceDateUtc = _clock.UtcNow,
-            UpdatedBy = _currentUser.Username,
+            CreatedAtUtc = _clock.UtcNow,
+            CreatedBy = _currentUser.Username,
             History = new List<PriceHistoryEntry>(),
         };
 
@@ -269,7 +277,7 @@ public class ItemManagementService : IItemManagementService
         return ItemDto.FromEntity(item);
     }
 
-    public async Task<ItemListResponse> SearchItemsAsync(
+    public async Task<PaginatedResponse<ItemDto>> SearchItemsAsync(
         string? search,
         string? classificationFilter,
         int page,
@@ -294,7 +302,7 @@ public class ItemManagementService : IItemManagementService
         var items = await _itemRepository.SearchAsync(search, classification, page, pageSize);
         var count = await _itemRepository.CountAsync(search, classification);
 
-        return new ItemListResponse
+        return new PaginatedResponse<ItemDto>
         {
             Items = items.Select(ItemDto.FromEntity),
             TotalCount = count,

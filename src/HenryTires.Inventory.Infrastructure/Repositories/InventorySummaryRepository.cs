@@ -16,19 +16,19 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
         : base(client, "Inventory", "InventorySummary")
     {
         var indexKeys = Builders<InventorySummaryDocument>
-            .IndexKeys.Ascending(s => s.BranchCode)
+            .IndexKeys.Ascending(s => s.BranchReference)
             .Ascending(s => s.ItemCode);
         var indexOptions = new CreateIndexOptions { Unique = true };
         var indexModel = new CreateIndexModel<InventorySummaryDocument>(indexKeys, indexOptions);
         _collection.Indexes.CreateOneAsync(indexModel);
 
-        var branchIndexKeys = Builders<InventorySummaryDocument>.IndexKeys.Ascending(s => s.BranchCode);
+        var branchIndexKeys = Builders<InventorySummaryDocument>.IndexKeys.Ascending(s => s.BranchReference);
         var branchIndexModel = new CreateIndexModel<InventorySummaryDocument>(branchIndexKeys);
         _collection.Indexes.CreateOneAsync(branchIndexModel);
     }
 
     public async Task<InventorySummary?> GetByKeyAsync(
-        string branchCode,
+        string branchReference,
         string itemCode,
         ITransactionScope? transactionScope = null
     )
@@ -36,7 +36,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
         var session = transactionScope.ToMongoSession();
 
         var filter = Builders<InventorySummaryDocument>.Filter.And(
-            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode),
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchReference, branchReference),
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.ItemCode, itemCode)
         );
 
@@ -50,7 +50,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
     }
 
     public async Task<IEnumerable<InventorySummary>> GetByBranchAsync(
-        string? branchCode,
+        string? branchReference,
         string? search,
         ItemCondition? condition,
         int page,
@@ -59,9 +59,9 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
     {
         var filters = new List<FilterDefinition<InventorySummaryDocument>>();
 
-        if (!string.IsNullOrWhiteSpace(branchCode))
+        if (!string.IsNullOrWhiteSpace(branchReference))
         {
-            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode));
+            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchReference, branchReference));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -99,16 +99,16 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
     }
 
     public async Task<long> CountByBranchAsync(
-        string? branchCode,
+        string? branchReference,
         string? search,
         ItemCondition? condition
     )
     {
         var filters = new List<FilterDefinition<InventorySummaryDocument>>();
 
-        if (!string.IsNullOrWhiteSpace(branchCode))
+        if (!string.IsNullOrWhiteSpace(branchReference))
         {
-            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, branchCode));
+            filters.Add(Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchReference, branchReference));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -139,9 +139,9 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
         return await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<int> GetTotalQuantityByBranchAsync(string branchCode)
+    public async Task<int> GetTotalQuantityByBranchAsync(string branchReference)
     {
-        var documents = await _collection.Find(s => s.BranchCode == branchCode).ToListAsync();
+        var documents = await _collection.Find(s => s.BranchReference == branchReference).ToListAsync();
         return documents.Sum(s => s.OnHandTotal);
     }
 
@@ -164,7 +164,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
             throw new InvalidOperationException("UpsertWithVersionCheckAsync requires a transaction scope.");
 
         var filter = Builders<InventorySummaryDocument>.Filter.And(
-            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchCode, summary.BranchCode),
+            Builders<InventorySummaryDocument>.Filter.Eq(s => s.BranchReference, summary.BranchReference),
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.ItemCode, summary.ItemCode),
             Builders<InventorySummaryDocument>.Filter.Eq(s => s.Version, summary.Version - 1) // Check previous version
         );
@@ -179,7 +179,7 @@ public class InventorySummaryRepository : CrudRepository<InventorySummaryDocumen
         if (result.ModifiedCount == 0 && result.UpsertedId == null)
         {
             throw new ConcurrencyException(
-                $"Inventory summary for {summary.BranchCode}/{summary.ItemCode} was modified by another transaction. Please retry."
+                $"Inventory summary for {summary.BranchReference}/{summary.ItemCode} was modified by another transaction. Please retry."
             );
         }
     }

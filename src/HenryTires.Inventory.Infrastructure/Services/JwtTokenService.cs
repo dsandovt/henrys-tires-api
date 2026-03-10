@@ -12,11 +12,20 @@ public class JwtTokenService : IJwtTokenService
 {
     private readonly IConfiguration _configuration;
     private readonly IBranchRepository _branchRepository;
+    private readonly IGroupRepository _groupRepository;
+    private readonly IRoleRepository _roleRepository;
 
-    public JwtTokenService(IConfiguration configuration, IBranchRepository branchRepository)
+    public JwtTokenService(
+        IConfiguration configuration,
+        IBranchRepository branchRepository,
+        IGroupRepository groupRepository,
+        IRoleRepository roleRepository
+    )
     {
         _configuration = configuration;
         _branchRepository = branchRepository;
+        _groupRepository = groupRepository;
+        _roleRepository = roleRepository;
     }
 
     public async Task<string> GenerateTokenAsync(User user)
@@ -35,21 +44,48 @@ public class JwtTokenService : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
             // Add simple claim names for frontend JWT decoding
             new Claim("nameid", user.Username),
-            new Claim("role", user.Role.ToString())
+            new Claim("firstName", user.FirstName),
+            new Claim("lastName", user.LastName),
         };
 
-        // Add branch information if user has a branch
-        if (!string.IsNullOrEmpty(user.BranchId))
-        {
-            claims.Add(new Claim("branchId", user.BranchId));
+        if (!string.IsNullOrEmpty(user.MiddleName))
+            claims.Add(new Claim("middleName", user.MiddleName));
+        if (!string.IsNullOrEmpty(user.SecondLastName))
+            claims.Add(new Claim("secondLastName", user.SecondLastName));
+        if (!string.IsNullOrEmpty(user.Email))
+            claims.Add(new Claim(ClaimTypes.Email, user.Email));
 
-            // Fetch branch to get the name and code
-            var branch = await _branchRepository.GetByIdAsync(user.BranchId);
-            if (branch != null)
+        // Add one claim per group reference
+        foreach (var groupRef in user.GroupReferences)
+        {
+            claims.Add(new Claim("groupReference", groupRef));
+        }
+
+        // Load ALL groups and union role codes
+        var groups = await _groupRepository.GetByIdsAsync(user.GroupReferences);
+        var addedRoleCodes = new HashSet<string>();
+        foreach (var group in groups)
+        {
+            if (!group.IsActive) continue;
+            foreach (var roleId in group.RoleReferences)
             {
+                var role = await _roleRepository.GetByIdAsync(roleId);
+                if (role != null && role.IsActive && addedRoleCodes.Add(role.Code))
+                {
+                    claims.Add(new Claim("roleCodes", role.Code));
+                }
+            }
+        }
+
+        // Add branch information — one pair of claims per branch
+        if (user.BranchReferences.Count > 0)
+        {
+            var branches = await _branchRepository.GetByIdsAsync(user.BranchReferences);
+            foreach (var branch in branches)
+            {
+                claims.Add(new Claim("branchReference", branch.Id));
                 claims.Add(new Claim("branchCode", branch.Code));
                 claims.Add(new Claim("branchName", branch.Name));
             }

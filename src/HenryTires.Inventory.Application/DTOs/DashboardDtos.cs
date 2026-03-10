@@ -46,7 +46,7 @@ public class BranchBreakdownDto
 public class RecentActivityItemDto
 {
     public required string Id { get; set; }
-    public required string TransactionNumber { get; set; }
+    public required string Number { get; set; }
     public required string Type { get; set; } // "Sale" or "Purchase"
     public required string Status { get; set; }
     public decimal Amount { get; set; }

@@ -8,22 +8,22 @@ namespace HenryTires.Inventory.Application.UseCases.Dashboard;
 
 public class DashboardService : IDashboardService
 {
-    private readonly IInventoryTransactionRepository _transactionRepository;
     private readonly ISaleRepository _saleRepository;
+    private readonly IPurchaseOrderRepository _purchaseOrderRepository;
     private readonly IBranchRepository _branchRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
 
     public DashboardService(
-        IInventoryTransactionRepository transactionRepository,
         ISaleRepository saleRepository,
+        IPurchaseOrderRepository purchaseOrderRepository,
         IBranchRepository branchRepository,
         ICurrentUser currentUser,
         IClock clock
     )
     {
-        _transactionRepository = transactionRepository;
         _saleRepository = saleRepository;
+        _purchaseOrderRepository = purchaseOrderRepository;
         _branchRepository = branchRepository;
         _currentUser = currentUser;
         _clock = clock;
@@ -32,65 +32,46 @@ public class DashboardService : IDashboardService
     public async Task<DashboardDataDto> GetDashboardDataAsync(
         DateTime startDateUtc,
         DateTime endDateUtc,
-        string? branchCode = null
+        string? branchReference = null
     )
     {
         if (endDateUtc < startDateUtc)
-        {
             throw new ArgumentException("End date must be after start date");
-        }
 
-        var validatedBranchCode = ValidateBranchAccessForQuery(branchCode);
-
-        var transactions = await _transactionRepository.SearchAsync(
-            branchCode: validatedBranchCode,
-            from: startDateUtc,
-            to: endDateUtc,
-            type: null,
-            status: TransactionStatus.Committed,
-            itemCode: null,
-            condition: null,
-            page: 1,
-            pageSize: 10000
-        );
-
-        var filteredTransactions = transactions.ToList();
-
-        string? branchId = null;
-        if (!string.IsNullOrEmpty(validatedBranchCode))
-        {
-            var branch = await _branchRepository.GetByCodeAsync(validatedBranchCode);
-            branchId = branch?.Id;
-        }
+        var validatedBranchReference = ValidateBranchAccessForQuery(branchReference);
 
         var sales = await _saleRepository.SearchAsync(
-            branchId: branchId,
+            branchReference: validatedBranchReference,
             from: startDateUtc,
             to: endDateUtc,
             page: 1,
             pageSize: 10000
         );
 
-        var committedSales = sales.Where(s => s.Status == TransactionStatus.Committed).ToList();
+        var postedSales = sales.Where(s => s.Status == SaleStatus.Committed).ToList();
+
+        var purchaseOrders = await _purchaseOrderRepository.SearchAsync(
+            branchReference: validatedBranchReference,
+            from: startDateUtc,
+            to: endDateUtc,
+            page: 1,
+            pageSize: 10000
+        );
+
+        var receivedPurchaseOrders = purchaseOrders
+            .Where(po => po.Status == PurchaseOrderStatus.Received)
+            .ToList();
 
         var todayStart = _clock.UtcNow.Date;
         var todayEnd = todayStart.AddDays(1).AddTicks(-1);
 
-        var summary = await CalculateSummaryAsync(
-            filteredTransactions,
-            committedSales,
-            todayStart,
-            todayEnd
-        );
+        var summary = CalculateSummary(postedSales, receivedPurchaseOrders, todayStart, todayEnd);
         summary.StartDate = startDateUtc;
         summary.EndDate = endDateUtc;
 
-        var branchBreakdown = await CalculateBranchBreakdownAsync(
-            filteredTransactions,
-            committedSales
-        );
+        var branchBreakdown = await CalculateBranchBreakdownAsync(postedSales, receivedPurchaseOrders);
 
-        var recentActivity = await GetRecentActivityAsync(filteredTransactions, committedSales);
+        var recentActivity = await GetRecentActivityAsync(postedSales, receivedPurchaseOrders);
 
         return new DashboardDataDto
         {
@@ -100,119 +81,88 @@ public class DashboardService : IDashboardService
         };
     }
 
-    private Task<DashboardSummaryDto> CalculateSummaryAsync(
-        List<InventoryTransaction> transactions,
+    private DashboardSummaryDto CalculateSummary(
         List<Sale> sales,
+        List<PurchaseOrder> purchaseOrders,
         DateTime todayStart,
         DateTime todayEnd
     )
     {
-        var outTransactions = transactions.Where(t => t.Type == TransactionType.Out).ToList();
-        var inTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
+        var salesTotal = sales.SelectMany(s => s.Lines).Sum(l => l.LineTotal);
+        var purchasesTotal = purchaseOrders.SelectMany(po => po.Lines).Sum(l => l.LineTotal);
 
-        var salesTotal =
-            sales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
-            + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
-        var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
-
-        var todaySales = sales
+        var salesToday = sales
             .Where(s => s.SaleDateUtc >= todayStart && s.SaleDateUtc <= todayEnd)
-            .ToList();
+            .SelectMany(s => s.Lines)
+            .Sum(l => l.LineTotal);
 
-        var todayOutTransactions = outTransactions
-            .Where(t => t.TransactionDateUtc >= todayStart && t.TransactionDateUtc <= todayEnd)
-            .ToList();
+        var purchasesToday = purchaseOrders
+            .Where(po => po.OrderDateUtc >= todayStart && po.OrderDateUtc <= todayEnd)
+            .SelectMany(po => po.Lines)
+            .Sum(l => l.LineTotal);
 
-        var todayPurchases = transactions
-            .Where(t =>
-                t.Type == TransactionType.In
-                && t.TransactionDateUtc >= todayStart
-                && t.TransactionDateUtc <= todayEnd
-            )
-            .ToList();
-
-        var salesToday =
-            todaySales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
-            + todayOutTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
-        var purchasesToday = todayPurchases.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
-
-        var currency =
-            sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-            ?? transactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
+        var currency = sales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
+            ?? purchaseOrders.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
             ?? Currency.USD;
 
-        return Task.FromResult(
-            new DashboardSummaryDto
-            {
-                SalesTotal = salesTotal,
-                PurchasesTotal = purchasesTotal,
-                NetTotal = salesTotal - purchasesTotal,
-                SalesToday = salesToday,
-                PurchasesToday = purchasesToday,
-                TotalTransactions = sales.Count + inTransactions.Count + outTransactions.Count,
-                SalesTransactions = sales.Count + outTransactions.Count,
-                PurchaseTransactions = inTransactions.Count,
-                Currency = currency,
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow,
-            }
-        );
+        return new DashboardSummaryDto
+        {
+            SalesTotal = salesTotal,
+            PurchasesTotal = purchasesTotal,
+            NetTotal = salesTotal - purchasesTotal,
+            SalesToday = salesToday,
+            PurchasesToday = purchasesToday,
+            TotalTransactions = sales.Count + purchaseOrders.Count,
+            SalesTransactions = sales.Count,
+            PurchaseTransactions = purchaseOrders.Count,
+            Currency = currency,
+            StartDate = _clock.UtcNow,
+            EndDate = _clock.UtcNow,
+        };
     }
 
     private async Task<List<BranchBreakdownDto>> CalculateBranchBreakdownAsync(
-        List<InventoryTransaction> transactions,
-        List<Sale> sales
+        List<Sale> sales,
+        List<PurchaseOrder> purchaseOrders
     )
     {
         var allBranches = await _branchRepository.GetAllAsync();
         var branchMap = allBranches.ToDictionary(b => b.Code, b => b.Name);
 
-        var salesByBranch = sales.GroupBy(s => s.BranchId);
-        var transactionsByBranch = transactions.GroupBy(t => t.BranchCode);
+        var salesByBranch = sales.Where(s => s.BranchCode != null).GroupBy(s => s.BranchCode!);
+        var posByBranch = purchaseOrders.Where(po => po.BranchCode != null).GroupBy(po => po.BranchCode!);
 
-        var allBranchIds = salesByBranch
-            .Select(g => g.Key)
-            .Union(transactionsByBranch.Select(g => g.Key))
+        var allBranchCodes = salesByBranch.Select(g => g.Key)
+            .Union(posByBranch.Select(g => g.Key))
             .Distinct();
 
         var breakdown = new List<BranchBreakdownDto>();
 
-        foreach (var branchId in allBranchIds)
+        foreach (var branchCode in allBranchCodes)
         {
             var branchSales =
-                salesByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList() ?? new List<Sale>();
-            var branchTransactions =
-                transactionsByBranch.FirstOrDefault(g => g.Key == branchId)?.ToList()
-                ?? new List<InventoryTransaction>();
+                salesByBranch.FirstOrDefault(g => g.Key == branchCode)?.ToList() ?? new List<Sale>();
+            var branchPOs =
+                posByBranch.FirstOrDefault(g => g.Key == branchCode)?.ToList() ?? new List<PurchaseOrder>();
 
-            var inTransactions = branchTransactions
-                .Where(t => t.Type == TransactionType.In)
-                .ToList();
-
-            var outTransactions = branchTransactions
-                .Where(t => t.Type == TransactionType.Out)
-                .ToList();
-
-            var salesTotal =
-                branchSales.SelectMany(s => s.Lines).Sum(l => l.LineTotal)
-                + outTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
-            var purchasesTotal = inTransactions.SelectMany(t => t.Lines).Sum(l => l.LineTotal);
+            var salesTotal = branchSales.SelectMany(s => s.Lines).Sum(l => l.LineTotal);
+            var purchasesTotal = branchPOs.SelectMany(po => po.Lines).Sum(l => l.LineTotal);
 
             var currency =
                 branchSales.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
-                ?? branchTransactions.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
+                ?? branchPOs.FirstOrDefault()?.Lines.FirstOrDefault()?.Currency
                 ?? Currency.USD;
 
             breakdown.Add(
                 new BranchBreakdownDto
                 {
-                    BranchCode = branchId,
-                    BranchName = branchMap.GetValueOrDefault(branchId, branchId),
+                    BranchCode = branchCode,
+                    BranchName = branchMap.GetValueOrDefault(branchCode, branchCode),
                     SalesTotal = salesTotal,
                     PurchasesTotal = purchasesTotal,
                     NetTotal = salesTotal - purchasesTotal,
-                    SalesTransactionCount = branchSales.Count + outTransactions.Count,
-                    PurchaseTransactionCount = inTransactions.Count,
+                    SalesTransactionCount = branchSales.Count,
+                    PurchaseTransactionCount = branchPOs.Count,
                     Currency = currency,
                 }
             );
@@ -222,8 +172,8 @@ public class DashboardService : IDashboardService
     }
 
     private async Task<List<RecentActivityItemDto>> GetRecentActivityAsync(
-        List<InventoryTransaction> transactions,
-        List<Sale> sales
+        List<Sale> sales,
+        List<PurchaseOrder> purchaseOrders
     )
     {
         var allBranches = await _branchRepository.GetAllAsync();
@@ -231,54 +181,46 @@ public class DashboardService : IDashboardService
 
         var activity = new List<RecentActivityItemDto>();
 
-        // Pre-compile lambda to avoid repeated compilation
-        static decimal CalculateLineTotal(IEnumerable<SaleLine> lines) =>
-            lines.Sum(l => l.LineTotal);
-        static decimal CalculateTransactionLineTotal(IEnumerable<InventoryTransactionLine> lines) =>
-            lines.Sum(l => l.LineTotal);
-
         foreach (var sale in sales)
         {
-            var amount = CalculateLineTotal(sale.Lines);
+            var amount = sale.Lines.Sum(l => l.LineTotal);
             var currency = sale.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto
                 {
                     Id = sale.Id,
-                    TransactionNumber = sale.SaleNumber,
+                    Number = sale.Number,
                     Type = "Sale",
                     Status = sale.Status.ToString(),
                     Amount = amount,
                     Currency = currency,
-                    BranchCode = sale.BranchId,
-                    BranchName = branchMap.GetValueOrDefault(sale.BranchId, sale.BranchId),
+                    BranchCode = sale.BranchCode,
+                    BranchName = branchMap.GetValueOrDefault(sale.BranchCode, sale.BranchCode),
                     TransactionDateUtc = sale.SaleDateUtc,
                     RelativeTime = GetRelativeTime(sale.SaleDateUtc),
                 }
             );
         }
 
-        var purchaseTransactions = transactions.Where(t => t.Type == TransactionType.In).ToList();
-
-        foreach (var tx in purchaseTransactions)
+        foreach (var po in purchaseOrders)
         {
-            var amount = CalculateTransactionLineTotal(tx.Lines);
-            var currency = tx.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
+            var amount = po.Lines.Sum(l => l.LineTotal);
+            var currency = po.Lines.FirstOrDefault()?.Currency ?? Currency.USD;
 
             activity.Add(
                 new RecentActivityItemDto
                 {
-                    Id = tx.Id,
-                    TransactionNumber = tx.TransactionNumber,
+                    Id = po.Id,
+                    Number = po.Number,
                     Type = "Purchase",
-                    Status = tx.Status.ToString(),
+                    Status = po.Status.ToString(),
                     Amount = amount,
                     Currency = currency,
-                    BranchCode = tx.BranchCode,
-                    BranchName = branchMap.GetValueOrDefault(tx.BranchCode, tx.BranchCode),
-                    TransactionDateUtc = tx.TransactionDateUtc,
-                    RelativeTime = GetRelativeTime(tx.TransactionDateUtc),
+                    BranchCode = po.BranchCode,
+                    BranchName = branchMap.GetValueOrDefault(po.BranchCode, po.BranchCode),
+                    TransactionDateUtc = po.OrderDateUtc,
+                    RelativeTime = GetRelativeTime(po.OrderDateUtc),
                 }
             );
         }
@@ -303,25 +245,23 @@ public class DashboardService : IDashboardService
         return dateUtc.ToString("MMM d, yyyy");
     }
 
-    private string? ValidateBranchAccessForQuery(string? branchCode)
+    private string? ValidateBranchAccessForQuery(string? branchReference)
     {
-        if (_currentUser.Role == Role.Admin)
-        {
-            return branchCode;
-        }
+        if (_currentUser.HasRole("ADMIN"))
+            return branchReference;
 
-        if (string.IsNullOrEmpty(_currentUser.BranchId))
-        {
+        if (_currentUser.BranchReferences.Count == 0)
             throw new UnauthorizedAccessException("User does not have a branch assignment");
-        }
 
-        if (!string.IsNullOrEmpty(branchCode) && branchCode != _currentUser.BranchId)
+        if (!string.IsNullOrEmpty(branchReference))
         {
-            throw new UnauthorizedAccessException(
-                "You can only view data for your assigned branch"
-            );
+            if (!_currentUser.CanAccessBranch(branchReference))
+                throw new UnauthorizedAccessException(
+                    "You can only view data for your assigned branches"
+                );
+            return branchReference;
         }
 
-        return _currentUser.BranchId;
+        return _currentUser.BranchReferences[0];
     }
 }

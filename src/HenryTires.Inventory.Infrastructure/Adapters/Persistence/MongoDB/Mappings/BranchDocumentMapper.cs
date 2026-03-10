@@ -13,7 +13,11 @@ public static class BranchDocumentMapper
             Code = document.Code,
             Name = document.Name,
             Address = document.Address,
-            Phone = document.Phone
+            Phone = document.Phone,
+            CreatedAtUtc = document.CreatedAtUtc,
+            CreatedBy = document.CreatedBy,
+            ModifiedAtUtc = document.ModifiedAtUtc,
+            ModifiedBy = document.ModifiedBy,
         };
     }
 
@@ -25,7 +29,11 @@ public static class BranchDocumentMapper
             Code = entity.Code,
             Name = entity.Name,
             Address = entity.Address,
-            Phone = entity.Phone
+            Phone = entity.Phone,
+            CreatedAtUtc = entity.CreatedAtUtc,
+            CreatedBy = entity.CreatedBy,
+            ModifiedAtUtc = entity.ModifiedAtUtc,
+            ModifiedBy = entity.ModifiedBy,
         };
     }
 }

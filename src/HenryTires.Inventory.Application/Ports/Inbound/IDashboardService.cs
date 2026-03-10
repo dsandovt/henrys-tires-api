@@ -7,6 +7,6 @@ public interface IDashboardService
     Task<DashboardDataDto> GetDashboardDataAsync(
         DateTime startDateUtc,
         DateTime endDateUtc,
-        string? branchCode = null
+        string? branchReference = null
     );
 }

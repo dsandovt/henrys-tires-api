@@ -62,7 +62,8 @@ public class PriceManagementService : IPriceManagementService
                 Currency = request.Currency,
                 LatestPrice = request.NewPrice,
                 LatestPriceDateUtc = _clock.UtcNow,
-                UpdatedBy = _currentUser.Username,
+                CreatedAtUtc = _clock.UtcNow,
+                CreatedBy = _currentUser.Username,
                 History = new List<PriceHistoryEntry>(),
             };
 

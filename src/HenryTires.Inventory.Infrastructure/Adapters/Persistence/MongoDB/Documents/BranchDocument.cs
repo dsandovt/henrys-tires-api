@@ -1,9 +1,10 @@
+using HenryTires.Inventory.Domain.Common;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace HenryTires.Inventory.Infrastructure.Adapters.Persistence.MongoDB.Documents;
 
-public class BranchDocument
+public class BranchDocument : AuditTrail
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]

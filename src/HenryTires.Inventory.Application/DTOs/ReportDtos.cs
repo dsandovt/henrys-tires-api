@@ -103,6 +103,87 @@ public class InvoiceTotalsDto
     public decimal AmountDue { get; set; }
 }
 
+public class SalesReportDto
+{
+    public required DateTime GeneratedAtUtc { get; set; }
+    public DateTime? FromDateUtc { get; set; }
+    public DateTime? ToDateUtc { get; set; }
+    public string? BranchCode { get; set; }
+    public string? BranchName { get; set; }
+    public required List<SalesReportRowDto> Rows { get; set; }
+    public required SalesReportTotalsDto Totals { get; set; }
+    public required int TotalCount { get; set; }
+}
+
+public class SalesReportRowDto
+{
+    public required string SaleNumber { get; set; }
+    public required string BranchCode { get; set; }
+    public required string BranchName { get; set; }
+    public required DateTime SaleDateUtc { get; set; }
+    public string? CustomerName { get; set; }
+    public required int LineCount { get; set; }
+    public required string LinesSummary { get; set; }
+    public required string PaymentMethod { get; set; }
+    public required decimal Total { get; set; }
+    public required string Currency { get; set; }
+    public required string Status { get; set; }
+}
+
+public class SalesReportTotalsDto
+{
+    public required decimal GrandTotal { get; set; }
+    public required int TotalSales { get; set; }
+    public required int TotalItems { get; set; }
+}
+
+public class DailyCloseReportDto
+{
+    public required DateTime GeneratedAtUtc { get; set; }
+    public required DateTime DateUtc { get; set; }
+    public string? BranchCode { get; set; }
+    public string? BranchName { get; set; }
+    public required string GroupBy { get; set; }
+    public required DailyCloseSummaryDto Summary { get; set; }
+    public required List<DailyCloseDetailDto> Details { get; set; }
+    public List<DailyCloseHourGroupDto>? HourGroups { get; set; }
+}
+
+public class DailyCloseSummaryDto
+{
+    public required int TotalSalesCount { get; set; }
+    public required decimal TotalAmount { get; set; }
+    public required string Currency { get; set; }
+    public required List<PaymentBreakdownDto> PaymentBreakdown { get; set; }
+}
+
+public class PaymentBreakdownDto
+{
+    public required string PaymentMethod { get; set; }
+    public required int Count { get; set; }
+    public required decimal Amount { get; set; }
+}
+
+public class DailyCloseDetailDto
+{
+    public required string SaleNumber { get; set; }
+    public required DateTime SaleDateUtc { get; set; }
+    public string? CustomerName { get; set; }
+    public required int LineCount { get; set; }
+    public required string PaymentMethod { get; set; }
+    public required decimal Total { get; set; }
+    public required string Currency { get; set; }
+}
+
+public class DailyCloseHourGroupDto
+{
+    public required int Hour { get; set; }
+    public required string HourLabel { get; set; }
+    public required List<DailyCloseDetailDto> Sales { get; set; }
+    public required decimal HourTotal { get; set; }
+    public required int HourCount { get; set; }
+}
+
 public class InventoryMovementsReportDto
 {
     public required DateTime GeneratedAtUtc { get; set; }
@@ -118,12 +199,12 @@ public class InventoryMovementsReportDto
 
 public class MovementTransactionDto
 {
-    public required string TransactionNumber { get; set; }
+    public required string Number { get; set; }
     public required string BranchCode { get; set; }
     public required string Type { get; set; }
     public required string Status { get; set; }
     public required DateTime TransactionDateUtc { get; set; }
-    public DateTime? CommittedAtUtc { get; set; }
+    public required List<StatusHistoryEntryDto> StatusHistory { get; set; }
     public string? Notes { get; set; }
     public required List<MovementLineDto> Lines { get; set; }
 }
@@ -136,4 +217,57 @@ public class MovementLineDto
     public required decimal UnitPrice { get; set; }
     public required string Currency { get; set; }
     public required decimal LineTotal { get; set; }
+}
+
+// ==================== Kardex Report ====================
+
+public class KardexReportDto
+{
+    public required DateTime GeneratedAtUtc { get; set; }
+    public required string ItemCode { get; set; }
+    public required string ItemDescription { get; set; }
+    public string? Condition { get; set; }
+    public string? BranchCode { get; set; }
+    public string? BranchName { get; set; }
+    public DateTime? FromDateUtc { get; set; }
+    public DateTime? ToDateUtc { get; set; }
+    public required List<KardexEntryDto> Entries { get; set; }
+    public required int TotalIn { get; set; }
+    public required int TotalOut { get; set; }
+}
+
+public class KardexEntryDto
+{
+    public required DateTime DateUtc { get; set; }
+    public required string ReferenceNumber { get; set; }
+    public required string Type { get; set; }
+    public required string BranchCode { get; set; }
+    public required int In { get; set; }
+    public required int Out { get; set; }
+    public required int Balance { get; set; }
+    public string? Notes { get; set; }
+}
+
+// ==================== Sales by Volume Report ====================
+
+public class SalesByVolumeReportDto
+{
+    public required DateTime GeneratedAtUtc { get; set; }
+    public DateTime? FromDateUtc { get; set; }
+    public DateTime? ToDateUtc { get; set; }
+    public string? BranchCode { get; set; }
+    public string? BranchName { get; set; }
+    public required List<SalesByVolumeRowDto> Rows { get; set; }
+    public required int TotalQuantitySold { get; set; }
+    public required decimal TotalRevenue { get; set; }
+}
+
+public class SalesByVolumeRowDto
+{
+    public required string ItemCode { get; set; }
+    public required string Description { get; set; }
+    public required string Condition { get; set; }
+    public required int QuantitySold { get; set; }
+    public required decimal Revenue { get; set; }
+    public required string Currency { get; set; }
 }

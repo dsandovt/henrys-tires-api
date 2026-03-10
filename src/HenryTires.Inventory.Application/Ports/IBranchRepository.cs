@@ -8,4 +8,5 @@ public interface IBranchRepository
     Task<IEnumerable<Branch>> GetAllAsync();
 
     Task<Branch?> GetByCodeAsync(string code);
+    Task<IEnumerable<Branch>> GetByIdsAsync(List<string> ids);
 }

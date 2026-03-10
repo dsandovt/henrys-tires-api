@@ -6,19 +6,19 @@ public interface ISaleRepository
 {
     Task<Sale?> GetByIdAsync(string id);
     Task<IEnumerable<Sale>> GetByBranchAndDateRangeAsync(
-        string branchId,
+        string branchReference,
         DateTime from,
         DateTime to
     );
     Task<IEnumerable<Sale>> GetByDateRangeAsync(DateTime from, DateTime to);
     Task<IEnumerable<Sale>> SearchAsync(
-        string? branchId,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
         int page,
         int pageSize
     );
-    Task<int> CountAsync(string? branchId, DateTime? from, DateTime? to);
+    Task<int> CountAsync(string? branchReference, DateTime? from, DateTime? to);
 
     Task<Sale> CreateAsync(Sale sale);
     Task UpdateAsync(Sale sale);

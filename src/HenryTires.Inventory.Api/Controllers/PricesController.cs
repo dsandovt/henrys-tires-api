@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/prices")]
+[Route("api/v1/price")]
 [Authorize]
 public class PricesController : ControllerBase
 {

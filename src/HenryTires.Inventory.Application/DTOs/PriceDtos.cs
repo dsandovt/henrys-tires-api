@@ -21,7 +21,7 @@ public class ConsumableItemPriceDto
             Currency = price.Currency,
             LatestPrice = price.LatestPrice,
             LatestPriceDateUtc = price.LatestPriceDateUtc,
-            UpdatedBy = price.UpdatedBy,
+            UpdatedBy = price.ModifiedBy ?? price.CreatedBy,
         };
     }
 }
@@ -68,7 +68,7 @@ public class ConsumableItemPriceWithHistoryDto
             Currency = price.Currency,
             LatestPrice = price.LatestPrice,
             LatestPriceDateUtc = price.LatestPriceDateUtc,
-            UpdatedBy = price.UpdatedBy,
+            UpdatedBy = price.ModifiedBy ?? price.CreatedBy,
             History = price.History.Select(PriceHistoryDto.FromEntity).ToList(),
         };
     }

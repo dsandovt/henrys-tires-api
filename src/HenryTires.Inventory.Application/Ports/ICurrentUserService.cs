@@ -1,12 +1,11 @@
-using HenryTires.Inventory.Domain.Enums;
-
 namespace HenryTires.Inventory.Application.Ports;
 
 public interface ICurrentUserService
 {
     string? Username { get; }
     string? UserId { get; }
-    Role? UserRole { get; }
-    string? BranchId { get; }
-    string? BranchCode { get; }
+    IReadOnlyList<string>? GroupReferences { get; }
+    IReadOnlyList<string>? RoleCodes { get; }
+    IReadOnlyList<string>? BranchReferences { get; }
+    IReadOnlyList<string>? BranchCodes { get; }
 }

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/branches")]
+[Route("api/branch")]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class BranchesController : ControllerBase
 {

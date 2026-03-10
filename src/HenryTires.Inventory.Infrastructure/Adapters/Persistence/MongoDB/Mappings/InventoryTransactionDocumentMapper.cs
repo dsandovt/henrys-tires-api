@@ -11,26 +11,23 @@ public static class InventoryTransactionDocumentMapper
         return new InventoryTransaction
         {
             Id = document.Id,
-            TransactionNumber = document.TransactionNumber,
+            BranchReference = document.BranchReference,
             BranchCode = document.BranchCode,
-            Type = document.Type,
+            Initiator = new EntityKey
+            {
+                Reference = document.Initiator.Reference,
+                ReferenceNumber = document.Initiator.ReferenceNumber,
+                EntityDefinitionCode = document.Initiator.EntityDefinitionCode,
+            },
             Status = document.Status,
             TransactionDateUtc = document.TransactionDateUtc,
             Notes = document.Notes,
-            PaymentMethod = document.PaymentMethod,
-            PaymentDetails = document.PaymentDetails?.Select(pd => new PaymentDetail
-            {
-                Method = pd.Method,
-                Amount = pd.Amount,
-                CheckNumber = pd.CheckNumber
-            }).ToList(),
-            CommittedAtUtc = document.CommittedAtUtc,
-            CommittedBy = document.CommittedBy,
             Lines = document.Lines.Select(ToLineEntity).ToList(),
+            StatusHistory = document.StatusHistory.Select(StatusHistoryMapper.ToEntity).ToList(),
             CreatedAtUtc = document.CreatedAtUtc,
             CreatedBy = document.CreatedBy,
             ModifiedAtUtc = document.ModifiedAtUtc,
-            ModifiedBy = document.ModifiedBy
+            ModifiedBy = document.ModifiedBy,
         };
     }
 
@@ -39,26 +36,23 @@ public static class InventoryTransactionDocumentMapper
         return new InventoryTransactionDocument
         {
             Id = entity.Id,
-            TransactionNumber = entity.TransactionNumber,
+            BranchReference = entity.BranchReference,
             BranchCode = entity.BranchCode,
-            Type = entity.Type,
+            Initiator = new EntityKeyDocument
+            {
+                Reference = entity.Initiator.Reference,
+                ReferenceNumber = entity.Initiator.ReferenceNumber,
+                EntityDefinitionCode = entity.Initiator.EntityDefinitionCode,
+            },
             Status = entity.Status,
             TransactionDateUtc = entity.TransactionDateUtc,
             Notes = entity.Notes,
-            PaymentMethod = entity.PaymentMethod,
-            PaymentDetails = entity.PaymentDetails?.Select(pd => new PaymentDetailDocument
-            {
-                Method = pd.Method,
-                Amount = pd.Amount,
-                CheckNumber = pd.CheckNumber
-            }).ToList(),
-            CommittedAtUtc = entity.CommittedAtUtc,
-            CommittedBy = entity.CommittedBy,
             Lines = entity.Lines.Select(ToLineDocument).ToList(),
+            StatusHistory = entity.StatusHistory.Select(StatusHistoryMapper.ToDocument).ToList(),
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedBy = entity.CreatedBy,
             ModifiedAtUtc = entity.ModifiedAtUtc,
-            ModifiedBy = entity.ModifiedBy
+            ModifiedBy = entity.ModifiedBy,
         };
     }
 
@@ -67,21 +61,9 @@ public static class InventoryTransactionDocumentMapper
         return new InventoryTransactionLine
         {
             LineId = document.LineId,
-            ItemId = document.ItemId,
             ItemCode = document.ItemCode,
             Condition = document.Condition,
             Quantity = document.Quantity,
-            UnitPrice = document.UnitPrice,
-            Currency = document.Currency,
-            IsTaxable = document.IsTaxable,
-            AppliesShopFee = document.AppliesShopFee,
-            PriceSource = document.PriceSource,
-            PriceSetByRole = document.PriceSetByRole,
-            PriceSetByUser = document.PriceSetByUser,
-            LineTotal = document.LineTotal,
-            CostOfGoodsSold = document.CostOfGoodsSold,
-            PriceNotes = document.PriceNotes,
-            ExecutedAtUtc = document.ExecutedAtUtc
         };
     }
 
@@ -90,21 +72,9 @@ public static class InventoryTransactionDocumentMapper
         return new InventoryTransactionLineDocument
         {
             LineId = entity.LineId,
-            ItemId = entity.ItemId,
             ItemCode = entity.ItemCode,
             Condition = entity.Condition,
             Quantity = entity.Quantity,
-            UnitPrice = entity.UnitPrice,
-            Currency = entity.Currency,
-            IsTaxable = entity.IsTaxable,
-            AppliesShopFee = entity.AppliesShopFee,
-            PriceSource = entity.PriceSource,
-            PriceSetByRole = entity.PriceSetByRole,
-            PriceSetByUser = entity.PriceSetByUser,
-            LineTotal = entity.LineTotal,
-            CostOfGoodsSold = entity.CostOfGoodsSold,
-            PriceNotes = entity.PriceNotes,
-            ExecutedAtUtc = entity.ExecutedAtUtc
         };
     }
 }

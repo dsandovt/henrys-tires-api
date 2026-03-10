@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using HenryTires.Inventory.Application.Ports;
-using HenryTires.Inventory.Domain.Enums;
+using HenryTires.Inventory.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -42,47 +42,83 @@ public class CurrentUserService : ICurrentUser
         }
     }
 
-    public Role Role
+    public string FirstName =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst("firstName")?.Value ?? "";
+
+    public string LastName =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst("lastName")?.Value ?? "";
+
+    public string? MiddleName =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst("middleName")?.Value;
+
+    public string? SecondLastName =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst("secondLastName")?.Value;
+
+    public string? Email =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
+
+    public IReadOnlyList<string> GroupReferences
     {
         get
         {
-            var claim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role);
-            if (claim == null || !Enum.TryParse<Role>(claim.Value, out var role))
-            {
-                throw new InvalidOperationException("Role not found in claims");
-            }
-            return role;
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("groupReference");
+            return claims?.Select(c => c.Value).ToList().AsReadOnly()
+                ?? new List<string>().AsReadOnly();
         }
     }
 
-    public string? BranchId
+    public IReadOnlyList<string> RoleCodes
     {
         get
         {
-            var claim = _httpContextAccessor.HttpContext?.User?.FindFirst("BranchId");
-            return claim?.Value;
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("roleCodes");
+            return claims?.Select(c => c.Value).ToList().AsReadOnly()
+                ?? new List<string>().AsReadOnly();
         }
     }
 
-    public string? BranchCode
+    public IReadOnlyList<string> BranchReferences
     {
         get
         {
-            // BranchCode is stored in JWT claims by JwtTokenService
-            var claim = _httpContextAccessor.HttpContext?.User?.FindFirst("branchCode");
-            var branchCode = claim?.Value;
-
-            if (branchCode == null && BranchId != null)
-            {
-                _logger.LogWarning(
-                    "BranchCode claim not found for user {UserId} with BranchId {BranchId}. "
-                        + "This may indicate an old JWT token. User should re-login.",
-                    UserId,
-                    BranchId
-                );
-            }
-
-            return branchCode;
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("branchReference");
+            return claims?.Select(c => c.Value).ToList().AsReadOnly()
+                ?? new List<string>().AsReadOnly();
         }
     }
+
+    public IReadOnlyList<string> BranchCodes
+    {
+        get
+        {
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("branchCode");
+            return claims?.Select(c => c.Value).ToList().AsReadOnly()
+                ?? new List<string>().AsReadOnly();
+        }
+    }
+
+    public bool HasRole(string roleCode)
+    {
+        return RoleCodes.Contains(roleCode);
+    }
+
+    public bool CanAccessBranch(string branchReference)
+    {
+        return BranchReferences.Contains(branchReference);
+    }
+
+    public bool CanAccessBranchCode(string branchCode)
+    {
+        return BranchCodes.Contains(branchCode);
+    }
+
+    public UserLite ToUserLite() => new()
+    {
+        FirstName = FirstName,
+        MiddleName = MiddleName,
+        LastName = LastName,
+        SecondLastName = SecondLastName,
+        Username = Username,
+        Email = Email,
+    };
 }

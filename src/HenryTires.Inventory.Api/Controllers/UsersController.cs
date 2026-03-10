@@ -1,15 +1,14 @@
 using HenryTires.Inventory.Application.Common;
 using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports.Inbound;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/users")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
+[Route("api/v1/user")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -20,15 +19,15 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<UserListResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<UserListResponse>>> GetUsers(
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<UserDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<UserDto>>>> GetUsers(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null
     )
     {
         var result = await _userService.GetUsersAsync(page, pageSize, search);
-        return Ok(ApiResponse<UserListResponse>.SuccessResponse(result));
+        return Ok(ApiResponse<PaginatedResponse<UserDto>>.SuccessResponse(result));
     }
 
     [HttpGet("{id}")]

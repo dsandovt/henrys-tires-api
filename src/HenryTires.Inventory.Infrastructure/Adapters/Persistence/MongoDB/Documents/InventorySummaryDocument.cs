@@ -10,6 +10,9 @@ public class InventorySummaryDocument
     [BsonRepresentation(BsonType.ObjectId)]
     public required string Id { get; set; }
 
+    [BsonRepresentation(BsonType.ObjectId)]
+    public required string BranchReference { get; set; }
+
     public required string BranchCode { get; set; }
     public required string ItemCode { get; set; }
     public required List<InventoryEntryDocument> Entries { get; set; }

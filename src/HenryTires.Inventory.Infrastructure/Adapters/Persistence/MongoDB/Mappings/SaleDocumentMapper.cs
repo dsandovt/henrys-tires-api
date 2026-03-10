@@ -11,8 +11,9 @@ public static class SaleDocumentMapper
         return new Sale
         {
             Id = document.Id,
-            SaleNumber = document.SaleNumber,
-            BranchId = document.BranchId,
+            Number = document.Number,
+            BranchReference = document.BranchReference,
+            BranchCode = document.BranchCode,
             SaleDateUtc = document.SaleDateUtc,
             Lines = document.Lines.Select(ToLineEntity).ToList(),
             CustomerName = document.CustomerName,
@@ -26,8 +27,7 @@ public static class SaleDocumentMapper
                 CheckNumber = pd.CheckNumber
             }).ToList(),
             Status = document.Status,
-            PostedAtUtc = document.PostedAtUtc,
-            PostedBy = document.PostedBy,
+            StatusHistory = document.StatusHistory.Select(StatusHistoryMapper.ToEntity).ToList(),
             CreatedAtUtc = document.CreatedAtUtc,
             CreatedBy = document.CreatedBy,
             ModifiedAtUtc = document.ModifiedAtUtc,
@@ -40,8 +40,9 @@ public static class SaleDocumentMapper
         return new SaleDocument
         {
             Id = entity.Id,
-            SaleNumber = entity.SaleNumber,
-            BranchId = entity.BranchId,
+            Number = entity.Number,
+            BranchReference = entity.BranchReference,
+            BranchCode = entity.BranchCode,
             SaleDateUtc = entity.SaleDateUtc,
             Lines = entity.Lines.Select(ToLineDocument).ToList(),
             CustomerName = entity.CustomerName,
@@ -55,8 +56,7 @@ public static class SaleDocumentMapper
                 CheckNumber = pd.CheckNumber
             }).ToList(),
             Status = entity.Status,
-            PostedAtUtc = entity.PostedAtUtc,
-            PostedBy = entity.PostedBy,
+            StatusHistory = entity.StatusHistory.Select(StatusHistoryMapper.ToDocument).ToList(),
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedBy = entity.CreatedBy,
             ModifiedAtUtc = entity.ModifiedAtUtc,
@@ -69,7 +69,7 @@ public static class SaleDocumentMapper
         return new SaleLine
         {
             LineId = document.LineId,
-            ItemId = document.ItemId,
+            ItemReference = document.ItemReference,
             ItemCode = document.ItemCode,
             Description = document.Description,
             Classification = document.Classification,
@@ -79,7 +79,6 @@ public static class SaleDocumentMapper
             Currency = document.Currency,
             IsTaxable = document.IsTaxable,
             AppliesShopFee = document.AppliesShopFee,
-            InventoryTransactionId = document.InventoryTransactionId
         };
     }
 
@@ -88,7 +87,7 @@ public static class SaleDocumentMapper
         return new SaleLineDocument
         {
             LineId = entity.LineId,
-            ItemId = entity.ItemId,
+            ItemReference = entity.ItemReference,
             ItemCode = entity.ItemCode,
             Description = entity.Description,
             Classification = entity.Classification,
@@ -98,7 +97,6 @@ public static class SaleDocumentMapper
             Currency = entity.Currency,
             IsTaxable = entity.IsTaxable,
             AppliesShopFee = entity.AppliesShopFee,
-            InventoryTransactionId = entity.InventoryTransactionId
         };
     }
 }

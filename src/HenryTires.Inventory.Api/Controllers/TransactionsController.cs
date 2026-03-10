@@ -12,47 +12,20 @@ namespace HenryTires.Inventory.Api.Controllers;
 /// Transaction management endpoints
 /// </summary>
 [ApiController]
-[Route("api/v1/transactions")]
+[Route("api/v1/transaction")]
 [Authorize]
 public class TransactionsController : ControllerBase
 {
     private readonly INewTransactionService _transactionService;
     private readonly ICurrentUserService _currentUser;
 
-    public TransactionsController(INewTransactionService transactionService, ICurrentUserService currentUser)
+    public TransactionsController(
+        INewTransactionService transactionService,
+        ICurrentUserService currentUser
+    )
     {
         _transactionService = transactionService;
         _currentUser = currentUser;
-    }
-
-    [HttpPost("in")]
-    [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ApiResponse<NewTransactionDto>>> CreateInTransaction(
-        [FromBody] CreateInTransactionRequest request
-    )
-    {
-        var result = await _transactionService.CreateInTransactionAsync(request);
-        return CreatedAtAction(
-            nameof(GetTransactionById),
-            new { transactionId = result.Id },
-            ApiResponse<NewTransactionDto>.SuccessResponse(result)
-        );
-    }
-
-    [HttpPost("out")]
-    [ProducesResponseType(typeof(ApiResponse<NewTransactionDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ApiResponse<NewTransactionDto>>> CreateOutTransaction(
-        [FromBody] CreateOutTransactionRequest request
-    )
-    {
-        var result = await _transactionService.CreateOutTransactionAsync(request);
-        return CreatedAtAction(
-            nameof(GetTransactionById),
-            new { transactionId = result.Id },
-            ApiResponse<NewTransactionDto>.SuccessResponse(result)
-        );
     }
 
     [HttpPost("adjust")]
@@ -109,44 +82,44 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<NewTransactionListResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<NewTransactionDto>>), StatusCodes.Status200OK)]
     public async Task<
-        ActionResult<ApiResponse<NewTransactionListResponse>>
+        ActionResult<ApiResponse<PaginatedResponse<NewTransactionDto>>>
     > GetTransactionsByBranch(
-        [FromQuery] string? branchCode = null,
-        [FromQuery] string? type = null,
+        [FromQuery] string? branchReference = null,
+        [FromQuery] string? initiatorType = null,
         [FromQuery] string? status = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20
     )
     {
-        TransactionType? transactionType = null;
+        InitiatorType? parsedInitiatorType = null;
         if (
-            !string.IsNullOrWhiteSpace(type)
-            && Enum.TryParse<TransactionType>(type, true, out var parsedType)
+            !string.IsNullOrWhiteSpace(initiatorType)
+            && Enum.TryParse<InitiatorType>(initiatorType, true, out var parsedType)
         )
         {
-            transactionType = parsedType;
+            parsedInitiatorType = parsedType;
         }
 
-        TransactionStatus? transactionStatus = null;
+        InventoryTransactionStatus? transactionStatus = null;
         if (
             !string.IsNullOrWhiteSpace(status)
-            && Enum.TryParse<TransactionStatus>(status, true, out var parsedStatus)
+            && Enum.TryParse<InventoryTransactionStatus>(status, true, out var parsedStatus)
         )
         {
             transactionStatus = parsedStatus;
         }
 
         var result = await _transactionService.GetTransactionsByBranchAsync(
-            branchCode,
-            transactionType,
+            branchReference,
+            parsedInitiatorType,
             transactionStatus,
             page,
             pageSize
         );
 
-        return Ok(ApiResponse<NewTransactionListResponse>.SuccessResponse(result));
+        return Ok(ApiResponse<PaginatedResponse<NewTransactionDto>>.SuccessResponse(result));
     }
 
     [HttpGet("inventory-summary")]
@@ -154,21 +127,36 @@ public class TransactionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<InventorySummaryDto?>>> GetInventorySummary(
         [FromQuery] string itemCode,
-        [FromQuery] string? branchCode = null
+        [FromQuery] string? branchReference = null
     )
     {
-        // StoreSeller users can only view inventory from their own branch
-        if (_currentUser.UserRole == Role.StoreSeller)
+        // StoreSeller users can only view inventory from their assigned branches
+        if (_currentUser.RoleCodes != null && !_currentUser.RoleCodes.Contains("ADMIN"))
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            var branchRefs = _currentUser.BranchReferences;
+            if (branchRefs == null || branchRefs.Count == 0)
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse("User must have a branch assigned")
+                );
             }
-            // Override branchCode parameter - force to user's branch
-            branchCode = _currentUser.BranchCode;
+            if (!string.IsNullOrEmpty(branchReference) && !branchRefs.Contains(branchReference))
+            {
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse(
+                        "Access denied: you do not have access to the specified branch"
+                    )
+                );
+            }
+            if (string.IsNullOrEmpty(branchReference))
+            {
+                branchReference = branchRefs[0];
+            }
         }
 
-        var result = await _transactionService.GetInventorySummaryAsync(branchCode, itemCode);
+        var result = await _transactionService.GetInventorySummaryAsync(branchReference, itemCode);
         if (result == null)
         {
             return NotFound(
@@ -188,22 +176,37 @@ public class TransactionsController : ControllerBase
     public async Task<
         ActionResult<ApiResponse<InventorySummaryListResponse>>
     > GetInventorySummariesByBranch(
-        [FromQuery] string? branchCode = null,
+        [FromQuery] string? branchReference = null,
         [FromQuery] string? search = null,
         [FromQuery] string? condition = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20
     )
     {
-        // StoreSeller users can only view inventory from their own branch
-        if (_currentUser.UserRole == Role.StoreSeller)
+        // Non-admin users can only view inventory from their assigned branches
+        if (_currentUser.RoleCodes != null && !_currentUser.RoleCodes.Contains("ADMIN"))
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            var branchRefs = _currentUser.BranchReferences;
+            if (branchRefs == null || branchRefs.Count == 0)
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse("User must have a branch assigned")
+                );
             }
-            // Override branchCode parameter - force to user's branch
-            branchCode = _currentUser.BranchCode;
+            if (!string.IsNullOrEmpty(branchReference) && !branchRefs.Contains(branchReference))
+            {
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse(
+                        "Access denied: you do not have access to the specified branch"
+                    )
+                );
+            }
+            if (string.IsNullOrEmpty(branchReference))
+            {
+                branchReference = branchRefs[0];
+            }
         }
 
         ItemCondition? conditionEnum = null;
@@ -216,7 +219,7 @@ public class TransactionsController : ControllerBase
         }
 
         var result = await _transactionService.GetInventorySummariesByBranchAsync(
-            branchCode,
+            branchReference,
             search,
             conditionEnum,
             page,

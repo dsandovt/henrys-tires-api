@@ -24,7 +24,7 @@ public class TransactionDto
     public required string Type { get; set; }
     public required string Status { get; set; }
     public string? Notes { get; set; }
-    public DateTime? PostedAtUtc { get; set; }
+    public DateTime? CommittedAtUtc { get; set; }
     public required List<TransactionLineDto> Lines { get; set; }
     public required DateTime CreatedAtUtc { get; set; }
     public required string CreatedBy { get; set; }
@@ -41,14 +41,6 @@ public class TransactionLineDto
     public required DateTime ExecutedAtUtc { get; set; }
 }
 
-public class TransactionListResponse
-{
-    public required IEnumerable<TransactionDto> Items { get; set; }
-    public required long TotalCount { get; set; }
-    public required int Page { get; set; }
-    public required int PageSize { get; set; }
-}
-
 public class StockBalanceDto
 {
     public required string ProductId { get; set; }
@@ -57,12 +49,4 @@ public class StockBalanceDto
     public required string ItemCondition { get; set; }
     public required int QuantityOnHand { get; set; }
     public required DateTime UpdatedAtUtc { get; set; }
-}
-
-public class StockListResponse
-{
-    public required IEnumerable<StockBalanceDto> Items { get; set; }
-    public required long TotalCount { get; set; }
-    public required int Page { get; set; }
-    public required int PageSize { get; set; }
 }
