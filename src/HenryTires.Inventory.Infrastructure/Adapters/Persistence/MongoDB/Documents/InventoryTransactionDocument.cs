@@ -53,7 +53,7 @@ public class StatusHistoryEntryDocument<T>
 {
     public required DateTime Date { get; set; }
 
-    [BsonRepresentation(BsonType.Int32)]
+    [BsonRepresentation(BsonType.String)]
     public required T Status { get; set; }
 
     public required UserLiteDocument User { get; set; }
