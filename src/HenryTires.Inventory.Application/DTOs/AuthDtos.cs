@@ -10,6 +10,7 @@ public class LoginResponse
 {
     public required string Token { get; set; }
     public required string Username { get; set; }
-    public required string Role { get; set; }
-    public string? BranchId { get; set; }
+    public required List<string> GroupReferences { get; set; }
+    public required List<string> RoleCodes { get; set; }
+    public required List<string> BranchReferences { get; set; }
 }

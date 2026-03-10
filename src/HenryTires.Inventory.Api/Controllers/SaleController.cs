@@ -3,14 +3,13 @@ using HenryTires.Inventory.Application.DTOs;
 using HenryTires.Inventory.Application.Ports;
 using HenryTires.Inventory.Application.Ports.Inbound;
 using HenryTires.Inventory.Domain.Entities;
-using HenryTires.Inventory.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/sales")]
+[Route("api/v1/sale")]
 [Authorize]
 public class SaleController : ControllerBase
 {
@@ -24,17 +23,37 @@ public class SaleController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<SaleDto>>> CreateSale([FromBody] CreateSaleRequest request)
+    public async Task<ActionResult<ApiResponse<SaleDto>>> CreateSale(
+        [FromBody] CreateSaleRequest request
+    )
     {
-        // StoreSeller users can only create sales for their own branch
-        if (_currentUser.UserRole == Role.StoreSeller)
+        // Non-admin users can only create sales for their assigned branches
+        if (_currentUser.RoleCodes != null && !_currentUser.RoleCodes.Contains("ADMIN"))
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchCode))
+            var branchCodes = _currentUser.BranchCodes;
+            if (branchCodes == null || branchCodes.Count == 0)
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse("User must have a branch assigned")
+                );
             }
-            // Force the sale to be created for the user's branch
-            request.BranchCode = _currentUser.BranchCode;
+            if (
+                !string.IsNullOrEmpty(request.BranchCode)
+                && !branchCodes.Contains(request.BranchCode)
+            )
+            {
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse(
+                        "Access denied: you do not have access to the specified branch"
+                    )
+                );
+            }
+            if (string.IsNullOrEmpty(request.BranchCode))
+            {
+                request.BranchCode = branchCodes[0];
+            }
         }
 
         Sale sale = await _saleService.CreateSaleAsync(request);
@@ -52,31 +71,46 @@ public class SaleController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<SalesListResponse>>> GetSales(
-        [FromQuery] string? branchId = null,
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<SaleDto>>>> GetSales(
+        [FromQuery] string? branchReference = null,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100
     )
     {
-        // StoreSeller users can only view sales from their own branch
-        if (_currentUser.UserRole == Role.StoreSeller)
+        // Non-admin users can only view sales from their assigned branches
+        if (_currentUser.RoleCodes != null && !_currentUser.RoleCodes.Contains("ADMIN"))
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            var branchRefs = _currentUser.BranchReferences;
+            if (branchRefs == null || branchRefs.Count == 0)
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse("User must have a branch assigned")
+                );
             }
-            // Override branchId parameter - force to user's branch
-            branchId = _currentUser.BranchId;
+            if (!string.IsNullOrEmpty(branchReference) && !branchRefs.Contains(branchReference))
+            {
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse(
+                        "Access denied: you do not have access to the specified branch"
+                    )
+                );
+            }
+            if (string.IsNullOrEmpty(branchReference))
+            {
+                branchReference = branchRefs[0];
+            }
         }
 
         IEnumerable<Sale> sales;
 
-        if (!string.IsNullOrEmpty(branchId) && from.HasValue && to.HasValue)
+        if (!string.IsNullOrEmpty(branchReference) && from.HasValue && to.HasValue)
         {
             sales = await _saleService.GetSalesByBranchAndDateRangeAsync(
-                branchId,
+                branchReference,
                 from.Value,
                 to.Value
             );
@@ -87,12 +121,12 @@ public class SaleController : ControllerBase
         }
         else
         {
-            sales = await _saleService.SearchSalesAsync(branchId, from, to, page, pageSize);
+            sales = await _saleService.SearchSalesAsync(branchReference, from, to, page, pageSize);
         }
 
-        var totalCount = await _saleService.CountSalesAsync(branchId, from, to);
+        var totalCount = await _saleService.CountSalesAsync(branchReference, from, to);
 
-        var response = new SalesListResponse
+        var response = new PaginatedResponse<SaleDto>
         {
             Items = sales.Select(MapToDto).ToList(),
             TotalCount = totalCount,
@@ -100,7 +134,7 @@ public class SaleController : ControllerBase
             PageSize = pageSize,
         };
 
-        return Ok(ApiResponse<SalesListResponse>.SuccessResponse(response));
+        return Ok(ApiResponse<PaginatedResponse<SaleDto>>.SuccessResponse(response));
     }
 
     [HttpGet("{id}")]
@@ -112,17 +146,27 @@ public class SaleController : ControllerBase
             return NotFound();
         }
 
-        // StoreSeller users can only view sales from their own branch
-        if (_currentUser.UserRole == Role.StoreSeller)
+        // Non-admin users can only view sales from their assigned branches
+        if (_currentUser.RoleCodes != null && !_currentUser.RoleCodes.Contains("ADMIN"))
         {
-            if (string.IsNullOrEmpty(_currentUser.BranchId))
+            var branchRefs = _currentUser.BranchReferences;
+            if (branchRefs == null || branchRefs.Count == 0)
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("StoreSeller must have a branch assigned"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse("User must have a branch assigned")
+                );
             }
 
-            if (sale.BranchId != _currentUser.BranchId)
+            var branchCodes = _currentUser.BranchCodes;
+            if (branchCodes == null || !branchCodes.Contains(sale.BranchCode))
             {
-                return StatusCode(403, ApiResponse<object>.ErrorResponse("Access denied: Sale belongs to a different branch"));
+                return StatusCode(
+                    403,
+                    ApiResponse<object>.ErrorResponse(
+                        "Access denied: Sale belongs to a different branch"
+                    )
+                );
             }
         }
 
@@ -135,14 +179,15 @@ public class SaleController : ControllerBase
         return new SaleDto
         {
             Id = sale.Id,
-            SaleNumber = sale.SaleNumber,
-            BranchId = sale.BranchId,
+            Number = sale.Number,
+            BranchReference = sale.BranchReference,
+            BranchCode = sale.BranchCode,
             SaleDateUtc = sale.SaleDateUtc,
             Lines = sale
                 .Lines.Select(l => new SaleLineDto
                 {
                     LineId = l.LineId!,
-                    ItemId = l.ItemId,
+                    ItemReference = l.ItemReference,
                     ItemCode = l.ItemCode,
                     Description = l.Description,
                     Classification = l.Classification,
@@ -150,17 +195,39 @@ public class SaleController : ControllerBase
                     Quantity = l.Quantity,
                     UnitPrice = l.UnitPrice,
                     Currency = l.Currency,
+                    IsTaxable = l.IsTaxable,
+                    AppliesShopFee = l.AppliesShopFee,
                     LineTotal = l.LineTotal,
-                    InventoryTransactionId = l.InventoryTransactionId,
                 })
                 .ToList(),
             CustomerName = sale.CustomerName,
             CustomerPhone = sale.CustomerPhone,
             Notes = sale.Notes,
             PaymentMethod = sale.PaymentMethod,
+            PaymentDetails = sale
+                .PaymentDetails?.Select(pd => new PaymentDetailDto
+                {
+                    Method = pd.Method.ToString(),
+                    Amount = pd.Amount,
+                    CheckNumber = pd.CheckNumber,
+                })
+                .ToList(),
             Status = sale.Status,
-            PostedAtUtc = sale.PostedAtUtc,
-            PostedBy = sale.PostedBy,
+            StatusHistory = sale.StatusHistory.Select(sh => new StatusHistoryEntryDto
+            {
+                Date = sh.Date,
+                Status = sh.Status.ToString(),
+                User = new UserLiteDto
+                {
+                    FirstName = sh.User.FirstName,
+                    MiddleName = sh.User.MiddleName,
+                    LastName = sh.User.LastName,
+                    SecondLastName = sh.User.SecondLastName,
+                    Username = sh.User.Username,
+                    Email = sh.User.Email,
+                },
+                Comment = sh.Comment,
+            }).ToList(),
             CreatedAtUtc = sale.CreatedAtUtc,
             CreatedBy = sale.CreatedBy,
             ModifiedAtUtc = sale.ModifiedAtUtc,

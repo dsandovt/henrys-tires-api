@@ -9,7 +9,7 @@ namespace HenryTires.Inventory.Infrastructure.Repositories;
 public class UserRepository : CrudRepository<UserDocument>, IUserRepository
 {
     public UserRepository(IMongoClient client)
-        : base(client, "Inventory", "Users") { }
+        : base(client, "Inventory", "User") { }
 
     public async Task<User?> GetByUsernameAsync(string username)
     {

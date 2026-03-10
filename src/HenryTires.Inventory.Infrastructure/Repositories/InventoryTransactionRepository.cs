@@ -14,21 +14,12 @@ public class InventoryTransactionRepository : CrudRepository<InventoryTransactio
     public InventoryTransactionRepository(IMongoClient client)
         : base(client, "Inventory", "InventoryTransaction") { }
 
-    public async Task<InventoryTransaction?> GetByTransactionNumberAsync(string transactionNumber)
-    {
-        var document = await _collection
-            .Find(t => t.TransactionNumber == transactionNumber)
-            .FirstOrDefaultAsync();
-
-        return document == null ? null : InventoryTransactionDocumentMapper.ToEntity(document);
-    }
-
     public async Task<IEnumerable<InventoryTransaction>> SearchAsync(
-        string? branchCode,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
-        TransactionType? type,
-        TransactionStatus? status,
+        InitiatorType? initiatorType,
+        InventoryTransactionStatus? status,
         string? itemCode,
         ItemCondition? condition,
         int page,
@@ -37,9 +28,9 @@ public class InventoryTransactionRepository : CrudRepository<InventoryTransactio
     {
         var filters = new List<FilterDefinition<InventoryTransactionDocument>>();
 
-        if (!string.IsNullOrEmpty(branchCode))
+        if (!string.IsNullOrEmpty(branchReference))
         {
-            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.BranchCode, branchCode));
+            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.BranchReference, branchReference));
         }
 
         if (from.HasValue)
@@ -52,9 +43,9 @@ public class InventoryTransactionRepository : CrudRepository<InventoryTransactio
             filters.Add(Builders<InventoryTransactionDocument>.Filter.Lte(t => t.CreatedAtUtc, to.Value));
         }
 
-        if (type.HasValue)
+        if (initiatorType.HasValue)
         {
-            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.Type, type.Value));
+            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.Initiator.EntityDefinitionCode, initiatorType.Value));
         }
 
         if (status.HasValue)
@@ -98,20 +89,20 @@ public class InventoryTransactionRepository : CrudRepository<InventoryTransactio
     }
 
     public async Task<long> CountAsync(
-        string? branchCode,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
-        TransactionType? type,
-        TransactionStatus? status,
+        InitiatorType? initiatorType,
+        InventoryTransactionStatus? status,
         string? itemCode,
         ItemCondition? condition
     )
     {
         var filters = new List<FilterDefinition<InventoryTransactionDocument>>();
 
-        if (!string.IsNullOrEmpty(branchCode))
+        if (!string.IsNullOrEmpty(branchReference))
         {
-            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.BranchCode, branchCode));
+            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.BranchReference, branchReference));
         }
 
         if (from.HasValue)
@@ -124,9 +115,9 @@ public class InventoryTransactionRepository : CrudRepository<InventoryTransactio
             filters.Add(Builders<InventoryTransactionDocument>.Filter.Lte(t => t.CreatedAtUtc, to.Value));
         }
 
-        if (type.HasValue)
+        if (initiatorType.HasValue)
         {
-            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.Type, type.Value));
+            filters.Add(Builders<InventoryTransactionDocument>.Filter.Eq(t => t.Initiator.EntityDefinitionCode, initiatorType.Value));
         }
 
         if (status.HasValue)

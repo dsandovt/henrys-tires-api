@@ -8,29 +8,27 @@ public interface IInventoryTransactionRepository
 {
     Task<InventoryTransaction?> GetByIdAsync(string id);
 
-    Task<InventoryTransaction?> GetByTransactionNumberAsync(string transactionNumber);
     Task<IEnumerable<InventoryTransaction>> SearchAsync(
-        string? branchCode,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
-        TransactionType? type,
-        TransactionStatus? status,
+        InitiatorType? initiatorType,
+        InventoryTransactionStatus? status,
         string? itemCode,
         ItemCondition? condition,
         int page,
         int pageSize
     );
     Task<long> CountAsync(
-        string? branchCode,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
-        TransactionType? type,
-        TransactionStatus? status,
+        InitiatorType? initiatorType,
+        InventoryTransactionStatus? status,
         string? itemCode,
         ItemCondition? condition
     );
 
-    // Custom command methods
     Task<InventoryTransaction> CreateAsync(InventoryTransaction transaction);
     Task UpdateAsync(InventoryTransaction transaction, ITransactionScope? transactionScope = null);
 }

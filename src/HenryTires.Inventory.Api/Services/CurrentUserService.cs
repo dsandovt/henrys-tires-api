@@ -1,5 +1,4 @@
 using HenryTires.Inventory.Application.Ports;
-using HenryTires.Inventory.Domain.Enums;
 using System.Security.Claims;
 
 namespace HenryTires.Inventory.Api.Services;
@@ -21,23 +20,47 @@ public class CurrentUserService : ICurrentUserService
         _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
         _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
 
-    public Role? UserRole
+    public IReadOnlyList<string>? GroupReferences
     {
         get
         {
-            var roleClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value ??
-                           _httpContextAccessor.HttpContext?.User?.FindFirst("role")?.Value;
-
-            if (string.IsNullOrEmpty(roleClaim))
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("groupReference");
+            if (claims == null || !claims.Any())
                 return null;
-
-            return Enum.TryParse<Role>(roleClaim, out var role) ? role : null;
+            return claims.Select(c => c.Value).ToList().AsReadOnly();
         }
     }
 
-    public string? BranchId =>
-        _httpContextAccessor.HttpContext?.User?.FindFirst("branchId")?.Value;
+    public IReadOnlyList<string>? RoleCodes
+    {
+        get
+        {
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("roleCodes");
+            if (claims == null || !claims.Any())
+                return null;
+            return claims.Select(c => c.Value).ToList().AsReadOnly();
+        }
+    }
 
-    public string? BranchCode =>
-        _httpContextAccessor.HttpContext?.User?.FindFirst("branchCode")?.Value;
+    public IReadOnlyList<string>? BranchReferences
+    {
+        get
+        {
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("branchReference");
+            if (claims == null || !claims.Any())
+                return null;
+            return claims.Select(c => c.Value).ToList().AsReadOnly();
+        }
+    }
+
+    public IReadOnlyList<string>? BranchCodes
+    {
+        get
+        {
+            var claims = _httpContextAccessor.HttpContext?.User?.FindAll("branchCode");
+            if (claims == null || !claims.Any())
+                return null;
+            return claims.Select(c => c.Value).ToList().AsReadOnly();
+        }
+    }
 }

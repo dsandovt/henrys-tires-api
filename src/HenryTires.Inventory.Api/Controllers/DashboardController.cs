@@ -25,7 +25,7 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<ApiResponse<DashboardDataDto>>> GetDashboardData(
         [FromQuery] DateTime startDateUtc,
         [FromQuery] DateTime endDateUtc,
-        [FromQuery] string? branchCode = null
+        [FromQuery] string? branchReference = null
     )
     {
         if (endDateUtc < startDateUtc)
@@ -38,7 +38,7 @@ public class DashboardController : ControllerBase
         var data = await _dashboardService.GetDashboardDataAsync(
             startDateUtc,
             endDateUtc,
-            branchCode
+            branchReference
         );
         return Ok(ApiResponse<DashboardDataDto>.SuccessResponse(data));
     }

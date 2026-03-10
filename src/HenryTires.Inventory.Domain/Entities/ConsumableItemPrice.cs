@@ -1,15 +1,15 @@
+using HenryTires.Inventory.Domain.Common;
 using HenryTires.Inventory.Domain.Enums;
 
 namespace HenryTires.Inventory.Domain.Entities;
 
-public class ConsumableItemPrice
+public class ConsumableItemPrice : AuditTrail
 {
     public required string Id { get; set; }
     public required string ItemCode { get; set; }
     public required Currency Currency { get; set; }
     public required decimal LatestPrice { get; set; }
     public required DateTime LatestPriceDateUtc { get; set; }
-    public required string UpdatedBy { get; set; }
     public required List<PriceHistoryEntry> History { get; set; }
 
     public void UpdatePrice(decimal newPrice, string updatedBy, DateTime dateUtc)
@@ -22,13 +22,13 @@ public class ConsumableItemPrice
             {
                 Price = LatestPrice,
                 DateUtc = LatestPriceDateUtc,
-                UpdatedBy = UpdatedBy,
+                UpdatedBy = ModifiedBy ?? CreatedBy,
             }
         );
 
         LatestPrice = newPrice;
         LatestPriceDateUtc = dateUtc;
-        UpdatedBy = updatedBy;
+        ModifiedBy = updatedBy;
     }
 }
 

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/items")]
+[Route("api/v1/item")]
 [Authorize]
 public class ItemsController : ControllerBase
 {
@@ -73,8 +73,8 @@ public class ItemsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<ItemListResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<ItemListResponse>>> SearchItems(
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<ItemDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<ItemDto>>>> SearchItems(
         [FromQuery] string? search = null,
         [FromQuery] string? classification = null,
         [FromQuery] int page = 1,
@@ -82,7 +82,7 @@ public class ItemsController : ControllerBase
     )
     {
         var result = await _itemService.SearchItemsAsync(search, classification, page, pageSize);
-        return Ok(ApiResponse<ItemListResponse>.SuccessResponse(result));
+        return Ok(ApiResponse<PaginatedResponse<ItemDto>>.SuccessResponse(result));
     }
 
     [HttpGet("all")]

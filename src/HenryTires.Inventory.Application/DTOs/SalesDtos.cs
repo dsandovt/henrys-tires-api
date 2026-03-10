@@ -5,17 +5,18 @@ namespace HenryTires.Inventory.Application.DTOs;
 public class SaleDto
 {
     public required string Id { get; set; }
-    public required string SaleNumber { get; set; }
-    public required string BranchId { get; set; }
+    public required string Number { get; set; }
+    public required string BranchReference { get; set; }
+    public required string BranchCode { get; set; }
     public required DateTime SaleDateUtc { get; set; }
     public required List<SaleLineDto> Lines { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
     public required PaymentMethod PaymentMethod { get; set; }
-    public required TransactionStatus Status { get; set; }
-    public DateTime? PostedAtUtc { get; set; }
-    public string? PostedBy { get; set; }
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
+    public required SaleStatus Status { get; set; }
+    public required List<StatusHistoryEntryDto> StatusHistory { get; set; }
     public required string CreatedBy { get; set; }
     public required DateTime CreatedAtUtc { get; set; }
     public DateTime? ModifiedAtUtc { get; set; }
@@ -25,43 +26,69 @@ public class SaleDto
 public class SaleLineDto
 {
     public required string LineId { get; set; }
-    public required string ItemId { get; set; }
+    public required string ItemReference { get; set; }
     public required string ItemCode { get; set; }
     public required string Description { get; set; }
-    public required Classification Classification { get; set; } // Good or Service
-    public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
+    public required Classification Classification { get; set; }
+    public ItemCondition? Condition { get; set; }
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
     public required Currency Currency { get; set; }
     public bool IsTaxable { get; set; } = true;
     public bool AppliesShopFee { get; set; } = true;
     public required decimal LineTotal { get; set; }
-    public string? InventoryTransactionId { get; set; } // Set only for Goods after posting
+}
+
+public class PaymentDetailDto
+{
+    public required string Method { get; set; }
+    public required decimal Amount { get; set; }
+    public string? CheckNumber { get; set; }
 }
 
 public class CreateSaleRequest
 {
-    public string? BranchCode { get; set; } // Required for Admin users
-    public required DateTime SaleDateUtc { get; set; }
+    public string? BranchCode { get; set; }
+    public DateTime? SaleDateUtc { get; set; }
     public required List<CreateSaleLineRequest> Lines { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? Notes { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+    public List<PaymentDetailDto>? PaymentDetails { get; set; }
 }
 
 public class CreateSaleLineRequest
 {
-    public required string ItemId { get; set; }
+    public required string ItemReference { get; set; }
     public required string ItemCode { get; set; }
     public required string Description { get; set; }
     public required Classification Classification { get; set; }
-    public ItemCondition? Condition { get; set; } // Required for Goods, null for Services
+    public ItemCondition? Condition { get; set; }
     public required int Quantity { get; set; }
     public required decimal UnitPrice { get; set; }
     public required Currency Currency { get; set; }
     public bool IsTaxable { get; set; } = true;
     public bool AppliesShopFee { get; set; } = true;
+    public bool AllowWithoutStock { get; set; } = false;
+}
+
+public class StatusHistoryEntryDto
+{
+    public required DateTime Date { get; set; }
+    public required string Status { get; set; }
+    public required UserLiteDto User { get; set; }
+    public string? Comment { get; set; }
+}
+
+public class UserLiteDto
+{
+    public required string FirstName { get; set; }
+    public string? MiddleName { get; set; }
+    public required string LastName { get; set; }
+    public string? SecondLastName { get; set; }
+    public required string Username { get; set; }
+    public string? Email { get; set; }
 }
 
 public class SalesDashboardDto
@@ -82,12 +109,12 @@ public class SalesDayRowDto
 
 public class BranchSalesDto
 {
-    public required string BranchId { get; set; }
+    public required string BranchReference { get; set; }
     public required string BranchCode { get; set; }
     public required decimal TotalAmount { get; set; }
     public required int NewTiresCount { get; set; }
     public required int UsedTiresCount { get; set; }
-    public required string StatusColor { get; set; } // "green", "red", "orange"
+    public required string StatusColor { get; set; }
 }
 
 public class SalesTotalDto
@@ -114,12 +141,4 @@ public class SalesRevenueDto
     public required decimal DailyPurchases { get; set; }
     public required decimal WeeklyPurchases { get; set; }
     public required decimal MonthlyPurchases { get; set; }
-}
-
-public class SalesListResponse
-{
-    public required IEnumerable<SaleDto> Items { get; set; }
-    public required int TotalCount { get; set; }
-    public required int Page { get; set; }
-    public required int PageSize { get; set; }
 }

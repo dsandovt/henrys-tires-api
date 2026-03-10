@@ -10,6 +10,7 @@ public static class InventorySummaryDocumentMapper
         return new InventorySummary
         {
             Id = document.Id,
+            BranchReference = document.BranchReference,
             BranchCode = document.BranchCode,
             ItemCode = document.ItemCode,
             Entries = document.Entries.Select(ToEntryEntity).ToList(),
@@ -25,6 +26,7 @@ public static class InventorySummaryDocumentMapper
         return new InventorySummaryDocument
         {
             Id = entity.Id,
+            BranchReference = entity.BranchReference,
             BranchCode = entity.BranchCode,
             ItemCode = entity.ItemCode,
             Entries = entity.Entries.Select(ToEntryDocument).ToList(),

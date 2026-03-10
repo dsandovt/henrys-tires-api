@@ -28,4 +28,10 @@ public class BranchRepository : CrudRepository<BranchDocument>, IBranchRepositor
         var documents = await base.GetAllAsync();
         return documents.Select(BranchDocumentMapper.ToEntity);
     }
+
+    public async Task<IEnumerable<Branch>> GetByIdsAsync(List<string> ids)
+    {
+        var documents = await base.GetByIdsAsync(ids);
+        return documents.Select(BranchDocumentMapper.ToEntity);
+    }
 }

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HenryTires.Inventory.Api.Controllers;
 
 [ApiController]
-[Route("api/branches")]
+[Route("api/branch")]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class BranchesController : ControllerBase
 {
@@ -29,6 +29,8 @@ public class BranchesController : ControllerBase
             Id = b.Id,
             Code = b.Code,
             Name = b.Name,
+            Address = b.Address,
+            Phone = b.Phone,
         });
 
         return Ok(ApiResponse<IEnumerable<BranchDto>>.SuccessResponse(dtos));

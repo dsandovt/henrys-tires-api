@@ -1,3 +1,4 @@
+using HenryTires.Inventory.Api.Converters;
 using HenryTires.Inventory.Api.Extensions;
 using HenryTires.Inventory.Api.Middleware;
 using HenryTires.Inventory.Api.Services;
@@ -12,6 +13,7 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services
 builder.Services.AddControllers();
+builder.Services.AddTimezoneOffsetJsonConverters();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
@@ -36,6 +38,7 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
 // Configure middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<TimezoneOffsetMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

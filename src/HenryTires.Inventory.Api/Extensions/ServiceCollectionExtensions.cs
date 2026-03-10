@@ -1,8 +1,8 @@
 using System.Text;
-using HenryTires.Inventory.Application.UseCases.Auth;
-using HenryTires.Inventory.Application.UseCases.Dashboard;
-using HenryTires.Inventory.Application.UseCases.Users;
+using HenryTires.Inventory.Api.Converters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -10,15 +10,23 @@ namespace HenryTires.Inventory.Api.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    /// <summary>
+    /// Registers JSON converters that apply the X-Timezone-Offset header
+    /// to all DateTime fields in API responses.
+    /// </summary>
+    public static IServiceCollection AddTimezoneOffsetJsonConverters(this IServiceCollection services)
     {
-        services.AddSingleton<AuthService>();
-        services.AddScoped<UserService>();
-        services.AddScoped<DashboardService>();
-
+        services.AddSingleton<IConfigureOptions<JsonOptions>>(sp =>
+        {
+            var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+            return new ConfigureOptions<JsonOptions>(options =>
+            {
+                options.JsonSerializerOptions.Converters.Insert(0, new UtcToOffsetDateTimeConverter(accessor));
+                options.JsonSerializerOptions.Converters.Insert(1, new UtcToOffsetNullableDateTimeConverter(accessor));
+            });
+        });
         return services;
     }
-
     public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration

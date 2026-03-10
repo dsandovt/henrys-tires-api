@@ -23,4 +23,14 @@ public class CompanyInfoProvider : ICompanyInfoProvider
             Phone = _configuration["CompanyInfo:Phone"] ?? ""
         };
     }
+
+    public InvoiceCompanyInfoDto GetCompanyInfo(string? branchAddress, string? branchPhone)
+    {
+        var info = GetCompanyInfo();
+        if (!string.IsNullOrEmpty(branchAddress))
+            info.AddressLine1 = branchAddress;
+        if (!string.IsNullOrEmpty(branchPhone))
+            info.Phone = branchPhone;
+        return info;
+    }
 }

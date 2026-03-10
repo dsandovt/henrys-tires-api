@@ -57,6 +57,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IInventorySummaryRepository, InventorySummaryRepository>();
         services.AddSingleton<IInventoryTransactionRepository, InventoryTransactionRepository>();
         services.AddSingleton<ISaleRepository, SaleRepository>();
+        services.AddSingleton<IRoleRepository, RoleRepository>();
+        services.AddSingleton<IGroupRepository, GroupRepository>();
+        services.AddSingleton<IPurchaseOrderRepository, PurchaseOrderRepository>();
 
         // Services
         services.AddSingleton<IPasswordHasher, PasswordHasher>();

@@ -14,8 +14,11 @@ public static class ConsumableItemPriceDocumentMapper
             Currency = document.Currency,
             LatestPrice = document.LatestPrice,
             LatestPriceDateUtc = document.LatestPriceDateUtc,
-            UpdatedBy = document.UpdatedBy,
-            History = document.History.Select(ToHistoryEntity).ToList()
+            History = document.History.Select(ToHistoryEntity).ToList(),
+            CreatedAtUtc = document.CreatedAtUtc,
+            CreatedBy = document.CreatedBy,
+            ModifiedAtUtc = document.ModifiedAtUtc,
+            ModifiedBy = document.ModifiedBy,
         };
     }
 
@@ -28,8 +31,11 @@ public static class ConsumableItemPriceDocumentMapper
             Currency = entity.Currency,
             LatestPrice = entity.LatestPrice,
             LatestPriceDateUtc = entity.LatestPriceDateUtc,
-            UpdatedBy = entity.UpdatedBy,
-            History = entity.History.Select(ToHistoryDocument).ToList()
+            History = entity.History.Select(ToHistoryDocument).ToList(),
+            CreatedAtUtc = entity.CreatedAtUtc,
+            CreatedBy = entity.CreatedBy,
+            ModifiedAtUtc = entity.ModifiedAtUtc,
+            ModifiedBy = entity.ModifiedBy,
         };
     }
 

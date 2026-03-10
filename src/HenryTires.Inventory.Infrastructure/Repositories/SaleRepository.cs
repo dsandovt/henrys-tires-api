@@ -12,13 +12,15 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
         : base(client, "Inventory", "Sale") { }
 
     public async Task<IEnumerable<Sale>> GetByBranchAndDateRangeAsync(
-        string branchId,
+        string branchReference,
         DateTime from,
         DateTime to
     )
     {
         var documents = await _collection
-            .Find(s => s.BranchId == branchId && s.SaleDateUtc >= from && s.SaleDateUtc <= to)
+            .Find(s =>
+                s.BranchReference == branchReference && s.SaleDateUtc >= from && s.SaleDateUtc <= to
+            )
             .SortByDescending(s => s.SaleDateUtc)
             .ToListAsync();
 
@@ -36,7 +38,7 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
     }
 
     public async Task<IEnumerable<Sale>> SearchAsync(
-        string? branchId,
+        string? branchReference,
         DateTime? from,
         DateTime? to,
         int page,
@@ -45,9 +47,9 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
     {
         var filters = new List<FilterDefinition<SaleDocument>>();
 
-        if (!string.IsNullOrEmpty(branchId))
+        if (!string.IsNullOrEmpty(branchReference))
         {
-            filters.Add(Builders<SaleDocument>.Filter.Eq(s => s.BranchId, branchId));
+            filters.Add(Builders<SaleDocument>.Filter.Eq(s => s.BranchReference, branchReference));
         }
 
         if (from.HasValue)
@@ -61,7 +63,9 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
         }
 
         var filter =
-            filters.Count > 0 ? Builders<SaleDocument>.Filter.And(filters) : FilterDefinition<SaleDocument>.Empty;
+            filters.Count > 0
+                ? Builders<SaleDocument>.Filter.And(filters)
+                : FilterDefinition<SaleDocument>.Empty;
 
         var documents = await _collection
             .Find(filter)
@@ -73,13 +77,13 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
         return documents.Select(SaleDocumentMapper.ToEntity);
     }
 
-    public async Task<int> CountAsync(string? branchId, DateTime? from, DateTime? to)
+    public async Task<int> CountAsync(string? branchReference, DateTime? from, DateTime? to)
     {
         var filters = new List<FilterDefinition<SaleDocument>>();
 
-        if (!string.IsNullOrEmpty(branchId))
+        if (!string.IsNullOrEmpty(branchReference))
         {
-            filters.Add(Builders<SaleDocument>.Filter.Eq(s => s.BranchId, branchId));
+            filters.Add(Builders<SaleDocument>.Filter.Eq(s => s.BranchReference, branchReference));
         }
 
         if (from.HasValue)
@@ -93,7 +97,9 @@ public class SaleRepository : CrudRepository<SaleDocument>, ISaleRepository
         }
 
         var filter =
-            filters.Count > 0 ? Builders<SaleDocument>.Filter.And(filters) : FilterDefinition<SaleDocument>.Empty;
+            filters.Count > 0
+                ? Builders<SaleDocument>.Filter.And(filters)
+                : FilterDefinition<SaleDocument>.Empty;
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }

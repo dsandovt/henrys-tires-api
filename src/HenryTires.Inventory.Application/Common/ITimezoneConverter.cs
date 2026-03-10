@@ -4,4 +4,5 @@ public interface ITimezoneConverter
 {
     DateTime ConvertUtcToEastern(DateTime utcDateTime);
     string GetTimezoneAbbreviation(DateTime utcDateTime);
+    string GetTimezoneId();
 }
