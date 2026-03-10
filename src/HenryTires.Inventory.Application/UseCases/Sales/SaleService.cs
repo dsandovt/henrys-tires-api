@@ -129,10 +129,10 @@ public class SaleService : ISaleService
             }
         }
 
-        if (request.PaymentMethod == PaymentMethod.Mixed)
+        if (request.PaymentMethod == PaymentMethod.Split)
         {
             if (request.PaymentDetails == null || request.PaymentDetails.Count < 2)
-                throw new ValidationException("Mixed payment requires at least two payment details");
+                throw new ValidationException("Split payment requires at least two payment details");
 
             var saleTotal = lines.Sum(l => l.Quantity * l.UnitPrice);
             var detailsTotal = request.PaymentDetails.Sum(pd => pd.Amount);

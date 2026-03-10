@@ -11,5 +11,5 @@ public enum PaymentMethod
     AccountsReceivable,
     Check,
     Transfer,
-    Mixed,
+    Split,
 }

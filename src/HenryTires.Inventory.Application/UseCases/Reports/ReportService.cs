@@ -347,7 +347,7 @@ public class ReportService : IReportService
             var total = s.Lines.Sum(l => l.LineTotal);
             var currency = s.Lines.FirstOrDefault()?.Currency.ToString() ?? "USD";
             var paymentLabel = s.PaymentDetails != null && s.PaymentDetails.Count > 1
-                ? "Mixed"
+                ? "Split"
                 : s.PaymentMethod.ToString();
 
             return new DailyCloseDetailDto
