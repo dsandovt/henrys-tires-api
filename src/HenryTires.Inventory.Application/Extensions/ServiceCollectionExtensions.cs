@@ -6,6 +6,7 @@ using HenryTires.Inventory.Application.UseCases.Inventory;
 using HenryTires.Inventory.Application.UseCases.PurchaseOrders;
 using HenryTires.Inventory.Application.UseCases.Reports;
 using HenryTires.Inventory.Application.UseCases.Roles;
+using HenryTires.Inventory.Application.UseCases.InventoryAdjustments;
 using HenryTires.Inventory.Application.UseCases.Sales;
 using HenryTires.Inventory.Application.UseCases.Users;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+        services.AddScoped<IInventoryAdjustmentService, InventoryAdjustmentService>();
 
         return services;
     }

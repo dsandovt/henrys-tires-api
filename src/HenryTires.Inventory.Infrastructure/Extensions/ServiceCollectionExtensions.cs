@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRoleRepository, RoleRepository>();
         services.AddSingleton<IGroupRepository, GroupRepository>();
         services.AddSingleton<IPurchaseOrderRepository, PurchaseOrderRepository>();
+        services.AddSingleton<IInventoryAdjustmentRepository, InventoryAdjustmentRepository>();
 
         // Services
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
