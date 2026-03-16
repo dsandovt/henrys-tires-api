@@ -73,8 +73,8 @@ public class ItemManagementService : IItemManagementService
             return ItemDto.FromEntity(existing);
         }
 
-        // Determine branch for InventorySummary creation
-        var (branchReference, branchCode) = await ResolveBranchAsync();
+        // Determine branch for InventorySummary creation (admins may not have a branch)
+        var resolved = await ResolveBranchAsync();
 
         // Use transaction to ensure atomicity
         using var scope = await _unitOfWork.BeginTransactionAsync();
@@ -98,12 +98,12 @@ public class ItemManagementService : IItemManagementService
 
             await _itemRepository.CreateAsync(item);
 
-            // Auto-create InventorySummary for Goods
-            if (classification == Classification.Good)
+            // Auto-create InventorySummary for Goods (skip if no branch, e.g. admin user)
+            if (classification == Classification.Good && resolved != null)
             {
                 await CreateInventorySummaryIfNotExistsAsync(
-                    branchReference,
-                    branchCode,
+                    resolved.Value.BranchReference,
+                    resolved.Value.BranchCode,
                     request.ItemCode,
                     scope
                 );
@@ -127,13 +127,13 @@ public class ItemManagementService : IItemManagementService
         }
     }
 
-    private async Task<(string BranchReference, string BranchCode)> ResolveBranchAsync()
+    private async Task<(string BranchReference, string BranchCode)?> ResolveBranchAsync()
     {
         if (_currentUser.BranchReferences.Count == 0)
         {
-            throw new ValidationException(
-                "User does not have an assigned branch. Cannot create Item inventory records."
-            );
+            // Admin users have no assigned branch — InventorySummary will be created
+            // when transactions occur at specific branches
+            return null;
         }
 
         var branch = await _branchRepository.GetByIdAsync(_currentUser.BranchReferences[0])
